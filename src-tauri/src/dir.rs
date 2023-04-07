@@ -59,7 +59,7 @@ impl IDir {
         op: Option<Box<impl FnOnce(&mut Self) + ?Sized>>,
     ) -> Result<bool, anyhow::Error> {
         // 路径的开头肯定包含自己的路径
-        assert!(path.starts_with(&self.path));
+        debug_assert!(path.starts_with(&self.path));
         // 去掉自己以外的
         let sub_path = &path[self.path.len()..];
         let sub_path_vec = utils::split_path(sub_path);

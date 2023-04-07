@@ -4,12 +4,16 @@
 use std::{fs::OpenOptions, io::Read};
 
 use dir::IDir;
-use parse::DirSDParser;
+use kv::{create_force_file_db, file_db, FileListDb};
+use kv_parse::DirSKVParser;
+use mem_parse::DirSMemParser;
 
 mod dir;
 mod file;
 mod i18n;
-mod parse;
+mod kv;
+mod kv_parse;
+mod mem_parse;
 mod utils;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -44,6 +48,11 @@ impl<T> BackendResponse<T> {
     }
 }
 
+// 包装
+fn result_package<T>(f: impl FnOnce() -> anyhow::Result<T>) -> BackendResponse<T> {
+    BackendResponse::result(f())
+}
+
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
 fn greet() -> BackendResponse<String> {
@@ -58,19 +67,37 @@ fn greet() -> BackendResponse<String> {
 }
 
 #[tauri::command]
-fn parse_file_list_by_path(path: String) -> BackendResponse<Option<IDir>> {
-    let r = {
-        let f = OpenOptions::new().read(true).open(path).unwrap();
-        let mut parser = DirSDParser::new();
-        parser.parse(f)
-    };
+fn mem_parse(path: String) -> BackendResponse<Option<IDir>> {
+    result_package::<Option<IDir>>(|| {
+        let f = OpenOptions::new().read(true).open(path)?;
+        let parser = DirSMemParser::new();
+        Ok(parser.parse(f)?)
+    })
+}
 
-    BackendResponse::result(r)
+#[tauri::command]
+fn kv_parse(path: String) -> BackendResponse<String> {
+    result_package::<String>(|| {
+        let f = OpenOptions::new().read(true).open(&path)?;
+        let db = create_force_file_db(&path)?;
+        let parser = DirSKVParser::new(db);
+        let root = parser.parse(f)?;
+        Ok(root)
+    })
+}
+
+#[tauri::command]
+fn db_select(root: String, path: String) -> BackendResponse<Option<IDir>> {
+    result_package::<Option<IDir>>(|| {
+        let db = file_db(&root)?;
+        let file_list_db = FileListDb::new(db);
+        Ok(Some(file_list_db.select_dir(&path)?))
+    })
 }
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet, parse_file_list_by_path])
+        .invoke_handler(tauri::generate_handler![greet, mem_parse, kv_parse])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

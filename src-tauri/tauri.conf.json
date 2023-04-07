@@ -16,6 +16,10 @@
       "shell": {
         "all": false,
         "open": true
+      },
+      "dialog": {
+        "all": false,
+        "open": true
       }
     },
     "bundle": {
@@ -27,7 +31,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "com.scboy.file-list",
       "targets": "all"
     },
     "security": {

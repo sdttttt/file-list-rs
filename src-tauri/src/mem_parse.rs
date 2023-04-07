@@ -8,7 +8,7 @@ use crate::{
     dir::IDir,
     file::IFile,
     i18n::{FsKeyword, Zh},
-    utils::{self, split_file_line},
+    utils::{self},
 };
 // 有效的解析文本
 //C:\Users\HP\.vscode\extensions\ms-python.vscode-pylance-2022.11.20\dist\typeshed-fallback\stdlib\email 的目录
@@ -45,6 +45,9 @@ static ref REGEX_DIR_PATH: Regex = Regex::new(r"(\w:\\){1}(\S){0,}").unwrap();
 // 匹配底部的数字部分
 static ref REGEX_SIZE: Regex = Regex::new(r"[\d,]+").unwrap();
 
+// sled 存放解析结果
+
+
 }
 
 #[derive(Debug, PartialEq)]
@@ -53,15 +56,15 @@ enum ParseMode {
     MatchDir,
 }
 
-// dir /s /d
-pub struct DirSDParser {
+// dir /s *.* 内存解析器
+pub struct DirSMemParser {
     keywords: Option<Box<dyn FsKeyword>>,
     mode: ParseMode,
     current_path: Option<String>,
     root: Option<IDir>,
 }
 
-impl DirSDParser {
+impl DirSMemParser {
     pub fn new() -> Self {
         Self {
             current_path: None,
@@ -76,67 +79,69 @@ impl DirSDParser {
         // 行数计数器
         let mut line_count = 0;
         for line_result in buf_lines {
-            line_count += 1;
-            if let Ok(ref line) = line_result {
-                // 跳过空行
-                if line.trim().is_empty() {
-                    continue;
-                }
+            match line_result {
+                Err(e) => bail!("{}", e),
 
-                // 没有加载语言
-                if self.keywords.is_none() {
-                    self.load_language(line);
+                Ok(ref line) => {
+                    // 跳过空行
+                    if line.trim().is_empty() {
+                        continue;
+                    }
+
+                    // 空行不算一行
+                    line_count += 1;
+                    // 没有加载语言
                     if self.keywords.is_none() {
-                        if line_count > 3 {
-                            bail!("前三行都没有检测到该输出所使用的语言，退出。")
+                        self.load_language(line);
+                        if self.keywords.is_none() {
+                            if line_count > 3 {
+                                bail!("前三行都没有检测到该输出所使用的语言，退出。")
+                            }
+                            continue;
                         }
+                    }
+
+                    // 匹配到目录路径了
+                    if let Some(mat) = REGEX_DIR_PATH.find(line) {
+                        let dir_path = mat.as_str();
+                        // 记录当前目录
+                        self.current_path = Some(dir_path.to_owned());
+                        // 模式改为目录模式
+                        self.mode = ParseMode::MatchDir;
+                        // 处理该目录
+                        self.find_dir()?;
+                        // 进入下一个循环
                         continue;
                     }
-                }
 
-                // 匹配到目录路径了
-                if let Some(mat) = REGEX_DIR_PATH.find(line) {
-                    let dir_path = mat.as_str();
-                    // 记录当前目录
-                    self.current_path = Some(dir_path.to_owned());
-                    // 模式改为目录模式
-                    self.mode = ParseMode::MatchDir;
-                    // 处理该目录
-                    self.find_dir()?;
-                    // 进入下一个循环
-                    continue;
-                }
-
-                // 匹配到文件夹大小
-                if line.contains(self.keywords.as_ref().unwrap().size())
-                    && self.mode == ParseMode::MatchDir
-                {
-                    let sizes = REGEX_SIZE
-                        .find_iter(line)
-                        .map(|t| t.as_str().trim())
-                        .collect::<Vec<&str>>();
-                    // 必须是2个，一个是文件数量，一个是文件夹
-                    assert_eq!(sizes.len(), 2);
-                    self.mode = ParseMode::Empty;
-                    self.write_dir_size(sizes[1])?;
-                    continue;
-                }
-
-                if self.mode == ParseMode::MatchDir {
-                    // 如果上面判断都没中，说明是文件行
-                    let files_line_vec = utils::split_file_line(line);
-
-                    if files_line_vec.len() != 4 {
-                        println!("{}", line);
-                    }
-                    // 必须是4，不然就是无效的文件行
-                    assert_eq!(files_line_vec.len(), 4);
-                    if files_line_vec.contains(&"<DIR>") {
-                        // 目录的话上面就记录了, 下一个循环
+                    // 匹配到文件夹大小
+                    if line.contains(self.keywords.as_ref().unwrap().size())
+                        && self.mode == ParseMode::MatchDir
+                    {
+                        let sizes = REGEX_SIZE
+                            .find_iter(line)
+                            .map(|t| t.as_str().trim())
+                            .collect::<Vec<&str>>();
+                        // 必须是2个，一个是文件数量，一个是文件夹
+                        debug_assert_eq!(sizes.len(), 2);
+                        self.mode = ParseMode::Empty;
+                        self.write_dir_size(sizes[1])?;
                         continue;
                     }
-                    let file_info = IFile::from_file_line_vec(files_line_vec);
-                    self.insert_file(file_info)?;
+
+                    if self.mode == ParseMode::MatchDir {
+                        // 如果上面判断都没中，说明是文件行
+                        let files_line_vec = utils::split_file_line(line);
+
+                        // 必须是>=4，不然就是无效的文件行
+                        debug_assert!(files_line_vec.len() >= 4);
+                        if files_line_vec.contains(&"<DIR>") {
+                            // 目录的话上面就记录了, 下一个循环
+                            continue;
+                        }
+                        let file_info = IFile::from_file_line_vec(files_line_vec);
+                        self.insert_file(file_info)?;
+                    }
                 }
             }
         }
@@ -190,10 +195,11 @@ mod tests {
 
     #[test]
     fn test_file_list() {
-        let mut d = TEST_DATA_PATH.clone();
-        d.push("test/list.txt");
+        // let mut d = TEST_DATA_PATH.clone();
+        // d.push("test/list.txt");
+        let d = PathBuf::from("Z:\\list.txt");
         let file = File::open(d).unwrap();
-        let mut f = DirSDParser::new();
+        let f = DirSMemParser::new();
         let r = f.parse(file).unwrap();
         println!("{:#?}", r.unwrap());
     }

@@ -1,4 +1,8 @@
 #[cfg(target_os = "windows")]
+use std::hash::{Hash, Hasher};
+
+use sled::IVec;
+
 const FS_PAT: &str = "\\";
 
 #[cfg(target_os = "unix")]
@@ -24,6 +28,19 @@ pub fn split_file_line(line: &str) -> Vec<&str> {
         .filter(|t| !t.trim().is_empty()) // 排除空
         .map(|t| t.trim())
         .collect()
+}
+
+#[inline]
+pub fn hash(k: impl Hash) -> String {
+    let mut buffer = itoa::Buffer::new();
+    let mut hasher = std::collections::hash_map::DefaultHasher::default();
+    k.hash(&mut hasher);
+    buffer.format(hasher.finish()).to_owned()
+}
+
+#[inline]
+pub fn ivec_to_str(vec: &IVec) -> &str {
+    std::str::from_utf8(vec).expect("feed_chans转换出错")
 }
 
 #[cfg(test)]
