@@ -38,6 +38,7 @@ impl FileListDb {
                 // 相等说明是本次查询的根路径
                 if ks == path {
                     root = Some(serde_json::from_str(vs)?);
+                    continue;
                 }
                 // 去掉本次路径的头, 然后通过文件系统的分隔符, 通过剩下的路径段数查看是否是本次查询目录的子目录
                 let is_sub_dir = ks[path.len()..]
