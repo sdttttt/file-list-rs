@@ -15,7 +15,8 @@
       <n-button type="primary" style="width: 100%;" @click="handleOpenFileSelector">
       解析文件
     </n-button>
-        <FileTree :data="fileTree"></FileTree>
+        <FileTreeMem v-if="backendMode == ParseBackend.Mem" :data="fileTree"></FileTreeMem>
+        <FileTreeKv v-if="backendMode == ParseBackend.Sled" :root="root"></FileTreeKv>
     </n-space>
     </n-layout-sider>
       <n-layout content-style="padding: 2rem;" :native-scrollbar="false">
@@ -38,12 +39,14 @@
 
 <script lang="ts" setup>
 import FileSelectorForm from "@/components/FileSelectorForm/index.vue"
-import FileTree from "@/views/FileTree/index.vue"
+import FileTreeMem from "@/views/FileTreeMem/index.vue"
+import FileTreeKv from "@/views/FileTreeKv/index.vue"
 import { useFileSelector} from "./states";
+import { ParseBackend } from "@/types";
 defineOptions({
     name: "Main"
 })
 
-const { showFileSelection, handleOpenFileSelector, fileSelectionForm, fileTree, handleParseFileByPath } = useFileSelector();
+const { showFileSelection, handleOpenFileSelector, fileSelectionForm, fileTree, handleParseFileByPath, backendMode, root} = useFileSelector();
 </script>
 

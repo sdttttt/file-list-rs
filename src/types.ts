@@ -9,7 +9,8 @@ export enum ParseBackend {
 
 export type FileSelectForm = {
     path: string;
-    mode: ParseMode
+    command: ParseMode,
+    backend: ParseBackend,
 }
 
 export type TreeNode = {

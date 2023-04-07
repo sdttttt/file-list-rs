@@ -8,7 +8,7 @@
     
     <n-form-item label="本地文件">
         <div w-100 flex flex-row  justify-between>
-        <n-input v-model:value="data.path" placeholder="展示路径(注意文件必须是UTF-8格式)" disabled>
+        <n-input v-model:value="data.path" placeholder="路径(注意文件必须是UTF-8格式，否则无法解析)" disabled>
         </n-input>
         <n-button ml-2 @click="handleOpenFileSelector">选择</n-button>
         </div>
@@ -16,13 +16,16 @@
 
       <n-form-item label="解析命令">
         <n-select
-         v-model:value="data.mode"
+         v-model:value="data.command"
           :options="typeOptions"
         />
       </n-form-item>
 
       <n-form-item label="解析后端">
-
+        <n-select
+         v-model:value="data.backend"
+          :options="backendOptions"
+        />
       </n-form-item>
     </n-form>
   </div>
@@ -63,12 +66,12 @@ const backendOptions = [
         label: "内存模式 (性能最好，但是会消耗大量内存)",
         value: ParseBackend.Mem,
     },
+
     {
-        label: "Sled模式 (最稳定，但是会消耗大量硬盘空间)",
+        label: "Sled模式 (性能稍差，节省内存，但是会消耗一定硬盘空间)",
         value: ParseBackend.Sled,
     }
 ];
-
 
 async function handleOpenFileSelector()
 {

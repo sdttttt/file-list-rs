@@ -40,7 +40,7 @@ pub fn hash(k: impl Hash) -> String {
 
 #[inline]
 pub fn ivec_to_str(vec: &IVec) -> &str {
-    std::str::from_utf8(vec).expect("feed_chans转换出错")
+    std::str::from_utf8(vec).expect("ivec转换出错")
 }
 
 #[cfg(test)]

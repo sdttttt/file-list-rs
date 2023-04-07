@@ -28,8 +28,19 @@ export async function greetRust(): Promise<BackendResponse<String>> {
 }
 
 
-export async function parseFileListByPathRust(path: string): Promise<BackendResponse<Dir>> {
+export async function memParse(path: string): Promise<BackendResponse<Dir>> {
     return await invoke("mem_parse", { path });
+}
+
+// 返回一个Root目录的路径
+// 这个很重要，要好好保存，除了路径查询，这个还是整个db的键
+export async function kvParse(path: string): Promise<BackendResponse<string>> {
+    return await invoke("kv_parse", { path });
+}
+
+
+export async function dbSelect(root: string, path: string): Promise<BackendResponse<Dir>> {
+    return await invoke("db_select", { root, path });
 }
 
 export function unwrap<T>(result: BackendResponse<T>): T | undefined {

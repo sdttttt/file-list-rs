@@ -12,7 +12,7 @@
 </template>
 
 <script lang="ts" setup>
-import {Dir} from "@/rust"
+import { Dir } from "@/rust"
 import { useTreeView } from "./states";
 const props = defineProps<{
     data?: Dir

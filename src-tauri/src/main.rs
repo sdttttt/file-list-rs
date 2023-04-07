@@ -97,7 +97,9 @@ fn db_select(root: String, path: String) -> BackendResponse<Option<IDir>> {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet, mem_parse, kv_parse])
+        .invoke_handler(tauri::generate_handler![
+            greet, mem_parse, kv_parse, db_select
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

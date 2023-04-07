@@ -29,12 +29,29 @@ impl FileListDb {
     }
 
     pub fn select_dir(&self, path: &str) -> anyhow::Result<IDir> {
-        if let Some(ref v) = self.db.get(utils::hash(path))? {
-            let root_s = utils::ivec_to_str(v);
-            let dir = serde_json::from_str::<IDir>(root_s)?;
-            return Ok(dir);
+        let mut root: Option<IDir> = None;
+        let mut dirs: Vec<IDir> = vec![];
+        for kv_result in self.db.scan_prefix(path) {
+            if let Ok((ref k, ref v)) = kv_result {
+                let ks = utils::ivec_to_str(k);
+                let vs = utils::ivec_to_str(v);
+                // 相等说明是本次查询的根路径
+                if ks == path {
+                    root = Some(serde_json::from_str(vs)?);
+                }
+                // 去掉本次路径的头, 然后通过文件系统的分隔符, 通过剩下的路径段数查看是否是本次查询目录的子目录
+                let is_sub_dir = ks[path.len()..]
+                    .split("\\")
+                    .filter(|t| !t.trim().is_empty())
+                    .count()
+                    == 1;
+                if is_sub_dir {
+                    dirs.push(serde_json::from_str(vs)?);
+                }
+            }
         }
-        bail!("查找路径数据错误");
+        root.as_mut().unwrap().dirs = dirs;
+        Ok(root.unwrap())
     }
 }
 
