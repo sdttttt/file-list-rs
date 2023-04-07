@@ -1,11 +1,4 @@
-use std::{
-    collections::HashMap,
-    fs::{self, File},
-    io::BufRead,
-    io::BufReader,
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
+use std::{fs::File, io::BufRead, io::BufReader, sync::Arc};
 
 use anyhow::bail;
 use lazy_static::lazy_static;
@@ -167,24 +160,22 @@ impl DirSKVParser {
 
     fn find_dir(&mut self) -> Result<(), anyhow::Error> {
         let path = self.current_path.as_ref().unwrap();
-        let key = &utils::hash(path);
-        if !self.db.contains_key(key)? {
+        if !self.db.contains_key(path)? {
             // 初始化一个新的Dir，序列化插入
             let dir = IDir::new(path);
-            self.db.insert(key, serde_json::to_vec(&dir)?)?;
+            self.db.insert(path, serde_json::to_vec(&dir)?)?;
         }
         Ok(())
     }
 
     fn write_dir_size(&mut self, size: &str) -> Result<(), anyhow::Error> {
         let path = self.current_path.as_ref().unwrap();
-        let key = &utils::hash(path);
-        match self.db.get(key)? {
+        match self.db.get(path)? {
             Some(ref iv) => {
                 let s = utils::ivec_to_str(iv);
                 let mut dir = serde_json::from_str::<IDir>(s)?;
                 dir.size = Some(size.to_owned());
-                self.db.insert(key, serde_json::to_vec(&dir)?)?;
+                self.db.insert(path, serde_json::to_vec(&dir)?)?;
             }
             None => {
                 bail!("目录键不存在？离谱！{}", path)
@@ -195,13 +186,12 @@ impl DirSKVParser {
 
     fn insert_file(&mut self, file: IFile) -> Result<(), anyhow::Error> {
         let path = self.current_path.as_ref().unwrap();
-        let key = &utils::hash(path);
-        match self.db.get(key)? {
+        match self.db.get(path)? {
             Some(ref iv) => {
                 let s = utils::ivec_to_str(iv);
                 let mut dir = serde_json::from_str::<IDir>(s)?;
                 dir.files.push(file);
-                self.db.insert(key, serde_json::to_vec(&dir)?)?;
+                self.db.insert(path, serde_json::to_vec(&dir)?)?;
             }
             None => {
                 bail!("目录键不存在？离谱！{}", path)
