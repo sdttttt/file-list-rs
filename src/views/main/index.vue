@@ -16,7 +16,7 @@
       解析文件
     </n-button>
         <FileTreeMem v-if="backendMode == ParseBackend.Mem" :data="fileTree"></FileTreeMem>
-        <FileTreeKv v-if="backendMode == ParseBackend.Sled" :root="root"></FileTreeKv>
+        <FileTreeKv v-if="backendMode == ParseBackend.Sled" :root="root" :db-key="dbKey"></FileTreeKv>
     </n-space>
     </n-layout-sider>
       <n-layout content-style="padding: 2rem;" :native-scrollbar="false">
@@ -47,6 +47,6 @@ defineOptions({
     name: "Main"
 })
 
-const { showFileSelection, handleOpenFileSelector, fileSelectionForm, fileTree, handleParseFileByPath, backendMode, root} = useFileSelector();
+const { showFileSelection, handleOpenFileSelector, fileSelectionForm, fileTree, handleParseFileByPath, backendMode, root, dbKey} = useFileSelector();
 </script>
 

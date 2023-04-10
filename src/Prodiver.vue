@@ -33,8 +33,7 @@
   defineOptions({
       name: "AppProvider",
   });
-  
-  
+
   
   // 挂载naive组件的方法至window, 以便在全局使用
   function setupNaiveTools()

@@ -1,11 +1,7 @@
 <template>
-    <div v-if="!treeView">
-        空文件树
-    </div>
 
     <n-tree
-      v-if="treeView"
-      :data="[treeView]"
+      :data="treeView? [treeView]: []"
       @load="handleLoadDir"
       style="max-height: 1000px"
     />

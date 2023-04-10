@@ -17,6 +17,7 @@ export function useFileSelector() {
     const fileTree = ref<Dir | undefined>(undefined);
     // Sled解析的组件参数
     const root = ref("");
+    const dbKey = ref("");
 
     function handleOpenFileSelector() {
         showFileSelection.value = true;
@@ -47,7 +48,8 @@ export function useFileSelector() {
                     var end = new Date().getTime()
                     window.$message?.success(`解析完成: ${end - start}ms`)
                     console.log(sledResult);
-                    root.value = sledResult;
+                    root.value = sledResult.rootPath;
+                    dbKey.value = sledResult.dbKey;
                     return true;
                 }
             default:
@@ -56,5 +58,5 @@ export function useFileSelector() {
         return false;
     }
 
-    return { showFileSelection, handleOpenFileSelector, fileSelectionForm, handleParseFileByPath, fileTree, backendMode, root };
+    return { showFileSelection, handleOpenFileSelector, fileSelectionForm, handleParseFileByPath, fileTree, backendMode, root, dbKey };
 }

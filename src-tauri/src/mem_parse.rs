@@ -44,10 +44,6 @@ static ref REGEX_EN: Regex = Regex::new(r"[\u4e00-\u9fa5]+").unwrap();
 static ref REGEX_DIR_PATH: Regex = Regex::new(r"(\w:\\){1}(\S){0,}").unwrap();
 // 匹配底部的数字部分
 static ref REGEX_SIZE: Regex = Regex::new(r"[\d,]+").unwrap();
-
-// sled 存放解析结果
-
-
 }
 
 #[derive(Debug, PartialEq)]

@@ -63,12 +63,12 @@ const typeOptions = [
 
 const backendOptions = [
     {
-        label: "内存模式 (性能最好，但是会消耗大量内存)",
+        label: "内存模式 (消耗内存)",
         value: ParseBackend.Mem,
     },
 
     {
-        label: "Sled模式 (性能稍差，节省内存，但是会消耗一定硬盘空间)",
+        label: "Sled模式 (消耗硬盘)",
         value: ParseBackend.Sled,
     }
 ];

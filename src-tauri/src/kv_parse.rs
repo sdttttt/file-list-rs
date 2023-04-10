@@ -224,11 +224,13 @@ mod tests {
     fn test_file_list() {
         let mut d = TEST_DATA_PATH.clone();
         d.push("test/list.txt");
-        let db = create_force_file_db(d.to_str().unwrap()).unwrap();
+        let (_, db) = create_force_file_db(d.to_str().unwrap()).unwrap();
         let file = File::open(d).unwrap();
         let f = DirSKVParser::new(db.to_owned());
         let root = f.parse(file).unwrap();
         let file_list = FileListDb::new(db);
-        println!("{:#?}", file_list.select_dir(&root).unwrap());
+        // println!("{:#?}", file_list.dir_info(&root).unwrap());
+        // println!("{:#?}", file_list.find_dir("git"));
+        // println!("{:#?}", file_list.find_file("nps"));
     }
 }

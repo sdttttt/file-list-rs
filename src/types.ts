@@ -19,3 +19,8 @@ export type TreeNode = {
     isLeaf: boolean,
     children?: TreeNode[]
 };
+
+export type FileTreeFindForm = {
+    keyword: string,
+    findType: "file" | "dir",
+};

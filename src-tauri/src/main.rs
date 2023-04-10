@@ -6,7 +6,10 @@ use std::{fs::OpenOptions, io::Read};
 use dir::IDir;
 use kv::{create_force_file_db, file_db, FileListDb};
 use kv_parse::DirSKVParser;
+use log::*;
 use mem_parse::DirSMemParser;
+use simplelog::Config as LogConfig;
+use simplelog::*;
 
 mod dir;
 mod file;
@@ -75,31 +78,96 @@ fn mem_parse(path: String) -> BackendResponse<Option<IDir>> {
     })
 }
 
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct KvParseResponseRaw {
+    #[serde(rename = "dbKey")]
+    pub db_key: String,
+    #[serde(rename = "rootPath")]
+    pub root_path: String,
+}
+
 #[tauri::command]
-fn kv_parse(path: String) -> BackendResponse<String> {
-    result_package::<String>(|| {
+fn kv_parse(path: String) -> BackendResponse<KvParseResponseRaw> {
+    result_package::<KvParseResponseRaw>(|| {
         let f = OpenOptions::new().read(true).open(&path)?;
-        let db = create_force_file_db(&path)?;
+        let (db_key, db) = create_force_file_db(&path)?;
         let parser = DirSKVParser::new(db);
-        let root = parser.parse(f)?;
-        Ok(root)
+        let root_path = parser.parse(f)?;
+        Ok(KvParseResponseRaw { db_key, root_path })
     })
 }
 
 #[tauri::command]
-fn db_select(root: String, path: String) -> BackendResponse<Option<IDir>> {
+fn db_select(db_key: String, path: String) -> BackendResponse<Option<IDir>> {
     result_package::<Option<IDir>>(|| {
-        let db = file_db(&root)?;
+        info!("db_key: {}, path: {}", db_key, path);
+        let db = file_db(&db_key)?;
         let file_list_db = FileListDb::new(db);
-        Ok(Some(file_list_db.select_dir(&path)?))
+        Ok(Some(file_list_db.dir_info(&path)?))
+    })
+}
+
+#[tauri::command]
+fn db_find_dir(db_key: String, keyword: String) -> BackendResponse<Vec<IDir>> {
+    result_package::<Vec<IDir>>(|| {
+        info!("db_key: {}, dir keyword: {}", db_key, keyword);
+        let db = file_db(&db_key)?;
+        let file_list_db = FileListDb::new(db);
+        Ok(file_list_db.find_dir(&keyword)?)
+    })
+}
+
+#[tauri::command]
+fn db_find_file(db_key: String, keyword: String) -> BackendResponse<Vec<String>> {
+    result_package::<Vec<String>>(|| {
+        info!("db_key: {}, file keyword: {}", db_key, keyword);
+        let db = file_db(&db_key)?;
+        let file_list_db = FileListDb::new(db);
+        Ok(file_list_db.find_file(&keyword)?)
     })
 }
 
 fn main() {
+    init_log();
+
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            greet, mem_parse, kv_parse, db_select
+            greet,
+            mem_parse,
+            kv_parse,
+            db_select,
+            db_find_dir,
+            db_find_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(debug_assertions)]
+fn init_log() {
+    CombinedLogger::init(vec![TermLogger::new(
+        LevelFilter::Info,
+        LogConfig::default(),
+        TerminalMode::Mixed,
+        ColorChoice::Auto,
+    )])
+    .unwrap();
+}
+
+#[cfg(not(debug_assertions))]
+fn init_log() {
+    CombinedLogger::init(vec![
+        TermLogger::new(
+            LevelFilter::Info,
+            LogConfig::default(),
+            TerminalMode::Mixed,
+            ColorChoice::Auto,
+        ),
+        WriteLogger::new(
+            LevelFilter::Info,
+            LogConfig::default(),
+            std::fs::File::create("file-list-rs.log").unwrap(),
+        ),
+    ])
+    .unwrap();
 }
