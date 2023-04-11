@@ -1,6 +1,6 @@
 <template>
   <n-layout>
-    <n-layout-header>
+    <n-layout-header ref="headerEl">
       <n-card>
         <template #header>
           {{ currentDir?.n || "未选择文件夹" }}
@@ -14,6 +14,7 @@
         size="small"
         :data="dirData"
         :bordered="false"
+        :max-height="tableHeight"
       />
     </n-layout-content>
   </n-layout>
@@ -27,7 +28,7 @@ import {
     storeToRefs
 } from "pinia";
 import {
-    computed, h
+    computed, h, ref,unref, watch
 } from "vue";
 import {
     DataTableColumns
@@ -38,6 +39,26 @@ import {
 import {
     NIcon, TreeOption
 } from "naive-ui";
+import {
+    useElementSize,
+    useWindowSize
+} from "@vueuse/core";
+
+const headerEl = ref(null);
+const {
+    height: headerHeight
+} = useElementSize(headerEl);
+const {
+    height: windowHeight
+} = useWindowSize();
+
+const tableHeight = computed(() => windowHeight.value - headerHeight.value - 40);
+
+watch(tableHeight, v => {
+    console.log(`headerHeight: ${headerHeight.value}`);
+    console.log(`windowHeight:${ windowHeight.value}`);
+    console.log(`tableHeight:${ v}`);
+});
 
 type DataItem = { path: string; size?: string; time?: string };
 

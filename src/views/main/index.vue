@@ -34,7 +34,6 @@
     </n-layout-sider>
     <n-layout
       content-style="padding: 0rem;"
-      :native-scrollbar="false"
     >
       <DirView />
     </n-layout>

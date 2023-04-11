@@ -40,6 +40,8 @@ export default defineConfig(async () => ({
         AutoImport({
             imports: [
                 "vue",
+                "vue/macros",
+                "@vueuse/core",
                 {
                     "naive-ui": [
                         "useDialog",
