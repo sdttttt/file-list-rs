@@ -1,14 +1,14 @@
 import { Dir } from "@/rust";
-import { TreeNode } from "@/types";
+import { TreeOptionExt } from "@/types";
 import { TreeNodeProps, TreeOption } from "naive-ui/es/tree/src/interface";
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, Ref } from "vue";
 
 const KeySep = "$R$";
 const FileEnd = "F";
 export function useTreeView(props: Readonly<Omit<{
     data?: Dir;
 }, never> & {}>) {
-    const treeView = ref<TreeNode | null>(null);
+    const treeView = ref<TreeOptionExt | null>(null);
     const realTree = ref<Dir | null>(null);
 
     watch(realTree, v => {
@@ -29,7 +29,7 @@ export function useTreeView(props: Readonly<Omit<{
 }
 
 
-function terserRootDirToTreeNode(root: Dir): TreeNode {
+function terserRootDirToTreeNode(root: Dir): TreeOptionExt {
     const key = KeySep
     const label = root.n;
     const isLeaf = false;
@@ -64,12 +64,13 @@ function terserRootDirToTreeNode(root: Dir): TreeNode {
         key,
         label,
         isLeaf,
-        children: [...childrenDir, ...childrenFile]
+        children: [...childrenDir, ...childrenFile],
+        meta: root,
     }
 }
 
 
-function terserSelectDirChildrenToTreeNodes(realRootTree: Dir, key: string): TreeNode[] {
+function terserSelectDirChildrenToTreeNodes(realRootTree: Dir, key: string): TreeOptionExt[] {
     const indexVec = key.split(KeySep).filter(t => t.trim().length != 0);
     let targetDir = realRootTree;
     for (const index of indexVec) {

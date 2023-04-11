@@ -23,13 +23,13 @@ export type Dir = {
     n: string, // path | name
     f: File[], // files
     d: Dir[], // directories
-    s: String, // size
+    s: string, // size
 };
 
 export type File = {
     n: string, // name
-    s: String, // size
-    t: String // time
+    s: string, // size
+    t: string // time
 };
 
 

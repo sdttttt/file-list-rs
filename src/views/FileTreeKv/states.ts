@@ -1,7 +1,12 @@
 import { Dir, dbSelect, unwrap, dbFindDir, dbFindFile } from "@/rust";
-import { FileTreeFindForm, TreeNode } from "@/types";
-import { TreeOption } from "naive-ui";
-import { Ref, ref, unref, watch, computed } from "vue";
+import { FileTreeFindForm, TreeOptionExt } from "@/types";
+import { Ref, ref, unref, watch, computed, h } from "vue";
+import { useDirViewStore } from "@/store";
+import {
+    Folder,
+    FolderOpenOutline
+} from '@vicons/ionicons5'
+import { NIcon, TreeOption } from 'naive-ui'
 
 const PathSeq = "\\";
 let dbKey = "";
@@ -9,7 +14,7 @@ export function useTreeView(props: Readonly<Omit<{
     root: string;
     dbKey: string,
 }, never> & {}>) {
-    const treeView = ref<TreeNode[]>([]);
+    const treeView = ref<TreeOptionExt[]>([]);
 
     watch([() => props.root, () => props.dbKey], ([root, newDbKey]) => {
         treeView.value = [
@@ -17,6 +22,9 @@ export function useTreeView(props: Readonly<Omit<{
                 key: root,
                 label: root,
                 isLeaf: false,
+                prefix: () => h(NIcon, null, {
+                    default: () => h(Folder)
+                }),
             }
         ];
         dbKey = newDbKey;
@@ -44,7 +52,7 @@ export function useFinder() {
     //文件搜索结果
     const finderFileResult = ref<string[]>([]);
     // 文件夹渲染树
-    const finderDirTree = ref<TreeNode[]>([]);
+    const finderDirTree = ref<TreeOptionExt[]>([]);
 
     function handleOpenFinderForm() {
         showFinderForm.value = true;
@@ -93,24 +101,71 @@ export function useFinder() {
     }
 }
 
-export async function handleLoadDir(op: TreeOption): Promise<void> {
-    const dir = unwrap(await dbSelect(dbKey, op.key as string));
-    op.children = terserSelectDirToTreeNodes(dir);
+export async function handleLoadDir(op: TreeOptionExt): Promise<void> {
+    if (!op.meta) {
+        op.meta = unwrap(await dbSelect(dbKey, op.key as string));
+    }
+    op.children = terserSelectDirToTreeNodes(op.meta as Dir);
 }
 
+export function treeNodeProps({ option }: { option: TreeOptionExt }) {
+    return {
+        onClick: async () => {
+            if (!option.meta) {
+                option.meta = unwrap(await dbSelect(dbKey, option.key as string));
+            }
+            const dirViewStroe = useDirViewStore();
+            if (option.isLeaf) {
+                // 叶子节点说明是文件了，不需要展示
+                return;
+            }
+            dirViewStroe.updateCurrentDirView(option.meta as Dir);
+            console.log(dirViewStroe.currentDir);
+        },
+    };
+}
 
-function terserSelectDirToTreeNodes(dir: Dir): TreeNode[] {
+export function updatePrefixWithExpaned(
+    _keys: Array<string | number>,
+    _option: Array<TreeOption | null>,
+    meta: {
+        node: TreeOption | null
+        action: 'expand' | 'collapse' | 'filter'
+    }
+) {
+    if (!meta.node) return
+    switch (meta.action) {
+        case 'expand':
+            meta.node.prefix = () =>
+                h(NIcon, null, {
+                    default: () => h(FolderOpenOutline)
+                })
+            break
+        case 'collapse':
+            meta.node.prefix = () =>
+                h(NIcon, null, {
+                    default: () => h(Folder)
+                })
+            break
+    }
+}
 
-    const dirNodes = dir.d.map((t): TreeNode => ({
+function terserSelectDirToTreeNodes(dir: Dir): TreeOptionExt[] {
+
+    const dirNodes = dir.d.map((t): TreeOptionExt => ({
         key: t.n,
         label: t.n.split(PathSeq).reverse()[0], // 获取最后一段路径
         isLeaf: false,
+        prefix: () => h(NIcon, null, {
+            default: () => h(Folder)
+        }),
     }));
 
-    const fileNodes = dir.f.map((t): TreeNode => ({
+    const fileNodes = dir.f.map((t): TreeOptionExt => ({
         key: dir.n + PathSeq + t.n,
         label: t.n,
-        isLeaf: true
+        isLeaf: true,
+        meta: t,
     }));
 
 

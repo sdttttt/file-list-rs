@@ -4,7 +4,7 @@
         content-style="padding: 24px;"
         collapse-mode="width"
         :collapsed-width="300"
-        :width="600"
+        :width="800"
         default-collapsed
         :native-scrollbar="false"
         show-trigger="arrow-circle"
@@ -19,8 +19,8 @@
         <FileTreeKv v-if="backendMode == ParseBackend.Sled" :root="root" :db-key="dbKey"></FileTreeKv>
     </n-space>
     </n-layout-sider>
-      <n-layout content-style="padding: 2rem;" :native-scrollbar="false">
-        文件夹内容展示
+      <n-layout content-style="padding: 0rem;" :native-scrollbar="false">
+        <DirView></DirView>
       </n-layout>
     </n-layout>
 
@@ -41,6 +41,7 @@
 import FileSelectorForm from "@/components/FileSelectorForm/index.vue"
 import FileTreeMem from "@/views/FileTreeMem/index.vue"
 import FileTreeKv from "@/views/FileTreeKv/index.vue"
+import DirView from "@/views/DirView/index.vue";
 import { useFileSelector} from "./states";
 import { ParseBackend } from "@/types";
 defineOptions({

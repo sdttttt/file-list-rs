@@ -1,19 +1,15 @@
 <template>
 
 <n-space vertical>
-    <n-button v-if="showFinder" type="warning" @click="() => showFinder = false">关闭查询树</n-button>
-    <n-button v-else type="info" @click="handleOpenFinderForm">查找</n-button>
+
+    <n-button v-if="showFinder" type="warning" size="small" @click="() => showFinder = false">关闭查询树</n-button>
+    <n-button v-else size="small" type="info" @click="handleOpenFinderForm">查找</n-button>
 
     <n-tree
-    v-show="!showFinder"
-      :data="treeView"
+      :data="showFinder ? finderDirTree : treeView"
+      :node-props="treeNodeProps"
       @load="handleLoadDir"
-    />
-
-    <n-tree
-        v-show="showFinder"
-      :data="finderDirTree"
-      @load="handleLoadDir"
+      @update:expanded-keys="updatePrefixWithExpaned"
     />
 
 </n-space>
@@ -41,7 +37,7 @@
 </template>
 
 <script lang="ts" setup>
-import { useTreeView, useFinder, handleLoadDir } from "./states";
+import { useTreeView, useFinder, handleLoadDir, treeNodeProps, updatePrefixWithExpaned } from "./states";
 import FileTreeFinderForm from "@/components/FileTreeFinderForm/index.vue"
 const props = defineProps<{
     root: string,

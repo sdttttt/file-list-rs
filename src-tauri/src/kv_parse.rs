@@ -230,7 +230,7 @@ mod tests {
         let root = f.parse(file).unwrap();
         let file_list = FileListDb::new(db);
         // println!("{:#?}", file_list.dir_info(&root).unwrap());
-        // println!("{:#?}", file_list.find_dir("git"));
-        // println!("{:#?}", file_list.find_file("nps"));
+        println!("{:#?}", file_list.find_dir("git"));
+        println!("{:#?}", file_list.find_file("nps"));
     }
 }

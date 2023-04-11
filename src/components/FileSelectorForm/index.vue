@@ -8,7 +8,7 @@
     
     <n-form-item label="本地文件">
         <div w-100 flex flex-row  justify-between>
-        <n-input v-model:value="data.path" placeholder="路径(注意文件必须是UTF-8格式，否则无法解析)" disabled>
+        <n-input v-model:value="data.path" placeholder="注意文件必须是UTF-8格式" disabled>
         </n-input>
         <n-button ml-2 @click="handleOpenFileSelector">选择</n-button>
         </div>
@@ -65,6 +65,7 @@ const backendOptions = [
     {
         label: "内存模式 (消耗内存)",
         value: ParseBackend.Mem,
+        disabled: true,
     },
 
     {

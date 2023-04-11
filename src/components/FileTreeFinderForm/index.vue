@@ -6,11 +6,11 @@
       :model="data"
     >
     
-    <n-form-item label="本地文件">
+    <n-form-item label="查找关键词">
         <n-input v-model:value="data.keyword"></n-input>
     </n-form-item>
 
-      <n-form-item label="解析命令">
+      <n-form-item label="文件类型">
         <n-select
          v-model:value="data.findType"
           :options="typeOptions"
