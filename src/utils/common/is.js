@@ -1,73 +1,59 @@
 // @ts-check
 const toString = Object.prototype.toString;
 
-export function is(val, type)
-{
+export function is(val, type) {
     return toString.call(val) === `[object ${type}]`;
 }
 
-export function isDef(val)
-{
+export function isDef(val) {
     return "undefined" !== typeof val;
 }
 
-export function isUndef(val)
-{
+export function isUndef(val) {
     return "undefined" === typeof val;
 }
 
-export function isNull(val)
-{
+export function isNull(val) {
     return null === val;
 }
 
-export function isWhitespace(val)
-{
+export function isWhitespace(val) {
     return "" === val;
 }
 
-export function isObject(val)
-{
+export function isObject(val) {
     return !isNull(val) && is(val, "Object");
 }
 
-export function isArray(val)
-{
+export function isArray(val) {
     return val && Array.isArray(val);
 }
 
-export function isString(val)
-{
+export function isString(val) {
     return is(val, "String");
 }
 
-export function isNumber(val)
-{
+export function isNumber(val) {
     return is(val, "Number");
 }
 
-export function isBoolean(val)
-{
+export function isBoolean(val) {
     return is(val, "Boolean");
 }
 
-export function isDate(val)
-{
+export function isDate(val) {
     return is(val, "Date");
 }
 
-export function isRegExp(val)
-{
+export function isRegExp(val) {
     return is(val, "RegExp");
 }
 
-export function isFunction(val)
-{
+export function isFunction(val) {
     return "function" === typeof val;
 }
 
-export function isPromise(val)
-{
+export function isPromise(val) {
     return (
         is(val, "Promise") &&
         isObject(val) &&
@@ -76,41 +62,33 @@ export function isPromise(val)
     );
 }
 
-export function isElement(val)
-{
+export function isElement(val) {
     return isObject(val) && Boolean(val.tagName);
 }
 
-export function isWindow(val)
-{
+export function isWindow(val) {
     return "undefined" !== typeof window && isDef(window) && is(val, "Window");
 }
 
-export function isNullOrUndef(val)
-{
+export function isNullOrUndef(val) {
     return isNull(val) || isUndef(val);
 }
 
-export function isNullOrWhitespace(val)
-{
+export function isNullOrWhitespace(val) {
     return isNullOrUndef(val) || isWhitespace(val);
 }
 
 /** 空数组 | 空字符串 | 空对象 | 空Map | 空Set */
-export function isEmpty(val)
-{
-    if (isArray(val) || isString(val))
-    {
+export function isEmpty(val) {
+    if (isArray(val) || isString(val)) {
         return 0 === val.length;
     }
 
-    if (val instanceof Map || val instanceof Set)
-    {
+    if (val instanceof Map || val instanceof Set) {
         return 0 === val.size;
     }
 
-    if (isObject(val))
-    {
+    if (isObject(val)) {
         return 0 === Object.keys(val).length;
     }
 
@@ -124,13 +102,11 @@ export function isEmpty(val)
  * @param {Number|Boolean|String} def
  * @returns
  */
-export function ifNull(val, def = "")
-{
+export function ifNull(val, def = "") {
     return isNullOrWhitespace(val) ? def : val;
 }
 
-export function isUrl(path)
-{
+export function isUrl(path) {
     const reg =
         /(((^https?:(?:\/\/)?)(?:[-;:&=+$,\w]+@)?[A-Za-z0-9.-]+(?::\d+)?|(?:www.|[-;:&=+$,\w]+@)[A-Za-z0-9.-]+)((?:\/[+~%/.\w-_]*)?\??(?:[-+=&;%@.\w_]*)#?(?:[\w]*))?)$/;
     return reg.test(path);
@@ -140,8 +116,7 @@ export function isUrl(path)
  * @param {string} path
  * @returns {Boolean}
  */
-export function isExternal(path)
-{
+export function isExternal(path) {
     return /^(https?:|mailto:|tel:)/.test(path);
 }
 

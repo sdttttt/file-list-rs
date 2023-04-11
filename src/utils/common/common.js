@@ -12,13 +12,11 @@ import {
 export function formatDateTime(
     time = undefined,
     format = "YYYY-MM-DD HH:mm:ss"
-)
-{
+) {
     return dayjs(time).format(format);
 }
 
-export function formatDate(date = undefined, format = "YYYY-MM-DD")
-{
+export function formatDate(date = undefined, format = "YYYY-MM-DD") {
     return formatDateTime(date, format);
 }
 
@@ -28,19 +26,16 @@ export function formatDate(date = undefined, format = "YYYY-MM-DD")
  * @param {Number} wait
  * @returns {Function}
  */
-export function throttle(fn, wait)
-{
+export function throttle(fn, wait) {
     let context,
         args,
         previous = 0;
 
-    return function ()
-    {
+    return function () {
         const now = Number(new Date());
         context = this;
         args = arguments;
-        if (now - previous > wait)
-        {
+        if (now - previous > wait) {
             fn.apply(context, args);
             previous = now;
         }
@@ -54,40 +49,30 @@ export function throttle(fn, wait)
  * @param {boolean} immediate
  * @return {*}
  */
-export function debounce(method, wait, immediate)
-{
+export function debounce(method, wait, immediate) {
     let timeout;
-    return function (...args)
-    {
+    return function (...args) {
         const context = this;
-        if (timeout)
-        {
+        if (timeout) {
             clearTimeout(timeout);
         }
 
         // 立即执行需要两个条件，一是immediate为true，二是timeout未被赋值或被置为null
-        if (immediate)
-        {
+        if (immediate) {
             /**
              * 如果定时器不存在，则立即执行，并设置一个定时器，wait毫秒后将定时器置为null
              * 这样确保立即执行后wait毫秒内不会被再次触发
              */
             const callNow = !timeout;
-            timeout = setTimeout(() =>
-            {
+            timeout = setTimeout(() => {
                 timeout = null;
             }, wait);
-            if (callNow)
-            {
+            if (callNow) {
                 method.apply(context, args);
             }
-        }
-
-        // 如果immediate为false，则函数wait毫秒后执行
-        else
-        {
-            timeout = setTimeout(() =>
-            {
+        } else {
+            // 如果immediate为false，则函数wait毫秒后执行
+            timeout = setTimeout(() => {
                 /**
                  * args是一个类数组对象，所以使用fn.apply
                  * 也可写作method.call(context, ...args)
@@ -103,10 +88,8 @@ export function debounce(method, wait, immediate)
  * @param {number} range
  * @returns {boolean}
  */
-export function luckboy(range)
-{
-    if (1 > range)
-    {
+export function luckboy(range) {
+    if (1 > range) {
         range = 1;
     }
     const x = random(0, range),

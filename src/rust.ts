@@ -1,16 +1,17 @@
 // When using the Tauri API npm package:
-import { invoke } from '@tauri-apps/api/tauri'
-
+import {
+    invoke
+} from "@tauri-apps/api/tauri";
 
 export type BackendResponse<T> = {
-    raw: T,
-    succ: boolean,
-    msg: string,
+    raw: T;
+    succ: boolean;
+    msg: string;
 };
 
 export type KvParseResponseRaw = {
-    dbKey: string,
-    rootPath: string,
+    dbKey: string;
+    rootPath: string;
 };
 
 /**
@@ -20,19 +21,17 @@ export type KvParseResponseRaw = {
  * Sled解析模式返回的root同样是一个绝对路径，但是所有的子目录的n字段也都是绝对路径
  */
 export type Dir = {
-    n: string, // path | name
-    f: File[], // files
-    d: Dir[], // directories
-    s: string, // size
+    n: string; // path | name
+    f: File[]; // files
+    d: Dir[]; // directories
+    s: string; // size
 };
 
 export type File = {
-    n: string, // name
-    s: string, // size
-    t: string // time
+    n: string; // name
+    s: string; // size
+    t: string; // time
 };
-
-
 
 export async function greetRust(): Promise<BackendResponse<String>> {
     return await invoke("greet");
@@ -40,37 +39,64 @@ export async function greetRust(): Promise<BackendResponse<String>> {
 
 // 内存解析
 export async function memParse(path: string): Promise<BackendResponse<Dir>> {
-    return await invoke("mem_parse", { path });
+    return await invoke("mem_parse", {
+        path,
+    });
 }
 
-// sled解析
-// 返回一个Root目录的路径
-// 这个很重要，要好好保存，除了路径查询，这个还是整个db的键
-export async function kvParse(path: string): Promise<BackendResponse<KvParseResponseRaw>> {
-    return await invoke("kv_parse", { path });
+/*
+ * sled解析
+ * 返回一个Root目录的路径
+ * 这个很重要，要好好保存，除了路径查询，这个还是整个db的键
+ */
+export async function kvParse(
+    path: string
+): Promise<BackendResponse<KvParseResponseRaw>> {
+    return await invoke("kv_parse", {
+        path,
+    });
 }
 
-// 数据查询，用于sled解析。
-// sled 解析完成后，整个数据会保存在硬盘上，通过Rust的后端来访问这些数据
-export async function dbSelect(dbKey: string, path: string): Promise<BackendResponse<Dir>> {
-    return await invoke("db_select", { dbKey, path });
+/*
+ * 数据查询，用于sled解析。
+ * sled 解析完成后，整个数据会保存在硬盘上，通过Rust的后端来访问这些数据
+ */
+export async function dbSelect(
+    dbKey: string,
+    path: string
+): Promise<BackendResponse<Dir>> {
+    return await invoke("db_select", {
+        dbKey,
+        path,
+    });
 }
 
 // 查询文件夹，用于sled解析。
-export async function dbFindDir(dbKey: string, keyword: string): Promise<BackendResponse<Dir[]>> {
-    return await invoke("db_find_dir", { dbKey, keyword });
+export async function dbFindDir(
+    dbKey: string,
+    keyword: string
+): Promise<BackendResponse<Dir[]>> {
+    return await invoke("db_find_dir", {
+        dbKey,
+        keyword,
+    });
 }
 
 // 查询文件，用于sled解析。
-export async function dbFindFile(dbKey: string, keyword: string): Promise<BackendResponse<string[]>> {
-    return await invoke("db_find_file", { dbKey, keyword });
+export async function dbFindFile(
+    dbKey: string,
+    keyword: string
+): Promise<BackendResponse<string[]>> {
+    return await invoke("db_find_file", {
+        dbKey,
+        keyword,
+    });
 }
 
 // 解包上面的事件函数
 export function unwrap<T>(result: BackendResponse<T>): T | undefined {
     if (result.succ) {
-        return result.raw
-    } else {
-        window.$message?.error(result.msg)
+        return result.raw;
     }
+    window.$message?.error(result.msg);
 }

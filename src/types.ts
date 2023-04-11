@@ -1,8 +1,12 @@
-import { Dir, File } from "./rust";
-import { TreeOption } from "naive-ui";
+import {
+    Dir, File
+} from "./rust";
+import {
+    TreeOption
+} from "naive-ui";
 
 export enum ParseMode {
-    DirS = "0"
+    DirS = "0",
 }
 
 export enum ParseBackend {
@@ -12,15 +16,15 @@ export enum ParseBackend {
 
 export type FileSelectForm = {
     path: string;
-    command: ParseMode,
-    backend: ParseBackend,
-}
-
-export interface TreeOptionExt extends TreeOption {
-    meta?: Dir | File,
+    command: ParseMode;
+    backend: ParseBackend;
 };
 
+export interface TreeOptionExt extends TreeOption {
+    meta?: Dir | File;
+}
+
 export type FileTreeFindForm = {
-    keyword: string,
-    findType: "file" | "dir",
+    keyword: string;
+    findType: "file" | "dir";
 };

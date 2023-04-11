@@ -1,1 +1,1 @@
-export * from "./dir-view"
+export * from "./dir-view";

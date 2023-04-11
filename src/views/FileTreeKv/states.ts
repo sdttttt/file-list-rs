@@ -1,39 +1,56 @@
-import { Dir, dbSelect, unwrap, dbFindDir, dbFindFile } from "@/rust";
-import { FileTreeFindForm, TreeOptionExt } from "@/types";
-import { Ref, ref, unref, watch, computed, h } from "vue";
-import { useDirViewStore } from "@/store";
 import {
-    Folder,
-    FolderOpenOutline
-} from '@vicons/ionicons5'
-import { NIcon, TreeOption } from 'naive-ui'
+    Dir, dbSelect, unwrap, dbFindDir, dbFindFile
+} from "@/rust";
+import {
+    FileTreeFindForm, TreeOptionExt
+} from "@/types";
+import {
+    Ref, ref, unref, watch, computed, h
+} from "vue";
+import {
+    useDirViewStore
+} from "@/store";
+import {
+    Folder, FolderOpenOutline
+} from "@vicons/ionicons5";
+import {
+    NIcon, TreeOption
+} from "naive-ui";
 
 const PathSeq = "\\";
 let dbKey = "";
-export function useTreeView(props: Readonly<Omit<{
-    root: string;
-    dbKey: string,
-}, never> & {}>) {
+export function useTreeView(
+    props: Readonly<
+        Omit<
+            {
+                root: string;
+                dbKey: string;
+            },
+            never
+        > & {}
+    >
+) {
     const treeView = ref<TreeOptionExt[]>([]);
 
     watch([() => props.root, () => props.dbKey], ([root, newDbKey]) => {
         treeView.value = [
             {
-                key: root,
-                label: root,
+                key   : root,
+                label : root,
                 isLeaf: false,
-                prefix: () => h(NIcon, null, {
-                    default: () => h(Folder)
-                }),
-            }
+                prefix: () =>
+                    h(NIcon, null, {
+                        default: () => h(Folder),
+                    }),
+            },
         ];
         dbKey = newDbKey;
-    })
+    });
 
     return {
         treeView,
-        handleLoadDir
-    }
+        handleLoadDir,
+    };
 }
 
 export function useFinder() {
@@ -46,7 +63,7 @@ export function useFinder() {
     // 搜索表单
     const finderForm = ref<FileTreeFindForm>({
         findType: "dir",
-        keyword: "",
+        keyword : "",
     });
 
     //文件搜索结果
@@ -59,46 +76,57 @@ export function useFinder() {
     }
 
     async function handleFind() {
-        const { keyword, findType } = unref(finderForm);
+        const {
+            keyword, findType
+        } = unref(finderForm);
         if (!keyword) {
             return;
         }
 
         if (!dbKey) {
-            window.$message.warning("dbKey不存在。")
+            window.$message.warning("dbKey不存在。");
         }
 
         switch (findType) {
-            case "dir":
-                const dirsResult = await dbFindDir(dbKey, keyword);
-                if (dirsResult.succ) {
-                    window.$message.info(`找到 ${dirsResult.raw.length} 个符合结果的目录`)
-                    finderDirTree.value = dirsResult.raw.map(t => ({
-                        key: t.n,
-                        label: t.n,
-                        isLeaf: false,
-                    }));
-                    showFinder.value = true;
-                }
-                break;
-            case "file":
-                const filesResult = await dbFindFile(dbKey, keyword);
-                if (filesResult.succ) {
-                    finderFileResult.value = filesResult.raw;
-                    window.$message.info(`找到 ${finderFileResult.value.length} 个符合结果的文件`)
-                    showFinderFileResult.value = true;
-                }
-                break;
+        case "dir": {
+            const dirsResult = await dbFindDir(dbKey, keyword);
+            if (dirsResult.succ) {
+                window.$message.info(
+                    `找到 ${dirsResult.raw.length} 个符合结果的目录`
+                );
+                finderDirTree.value = dirsResult.raw.map(t => ({
+                    key   : t.n,
+                    label : t.n,
+                    isLeaf: false,
+                }));
+                showFinder.value = true;
+            }
+            break;
+        }
+        case "file": {
+            const filesResult = await dbFindFile(dbKey, keyword);
+            if (filesResult.succ) {
+                finderFileResult.value = filesResult.raw;
+                window.$message.info(
+                    `找到 ${finderFileResult.value.length} 个符合结果的文件`
+                );
+                showFinderFileResult.value = true;
+            }
+            break;
+        }
         }
     }
 
     return {
-        showFinder, handleOpenFinderForm,
-        finderForm, showFinderFileResult,
-        handleFind, finderFileResult,
+        showFinder,
+        handleOpenFinderForm,
+        finderForm,
+        showFinderFileResult,
+        handleFind,
+        finderFileResult,
         finderDirTree,
-        showFinderForm
-    }
+        showFinderForm,
+    };
 }
 
 export async function handleLoadDir(op: TreeOptionExt): Promise<void> {
@@ -108,11 +136,15 @@ export async function handleLoadDir(op: TreeOptionExt): Promise<void> {
     op.children = terserSelectDirToTreeNodes(op.meta as Dir);
 }
 
-export function treeNodeProps({ option }: { option: TreeOptionExt }) {
+export function treeNodeProps({
+    option
+}: { option: TreeOptionExt }) {
     return {
         onClick: async () => {
             if (!option.meta) {
-                option.meta = unwrap(await dbSelect(dbKey, option.key as string));
+                option.meta = unwrap(
+                    await dbSelect(dbKey, option.key as string)
+                );
             }
             const dirViewStroe = useDirViewStore();
             if (option.isLeaf) {
@@ -129,46 +161,50 @@ export function updatePrefixWithExpaned(
     _keys: Array<string | number>,
     _option: Array<TreeOption | null>,
     meta: {
-        node: TreeOption | null
-        action: 'expand' | 'collapse' | 'filter'
+        node: TreeOption | null;
+        action: "expand" | "collapse" | "filter";
     }
 ) {
-    if (!meta.node) return
+    if (!meta.node) {
+        return;
+    }
     switch (meta.action) {
-        case 'expand':
-            meta.node.prefix = () =>
-                h(NIcon, null, {
-                    default: () => h(FolderOpenOutline)
-                })
-            break
-        case 'collapse':
-            meta.node.prefix = () =>
-                h(NIcon, null, {
-                    default: () => h(Folder)
-                })
-            break
+    case "expand":
+        meta.node.prefix = () =>
+            h(NIcon, null, {
+                default: () => h(FolderOpenOutline),
+            });
+        break;
+    case "collapse":
+        meta.node.prefix = () =>
+            h(NIcon, null, {
+                default: () => h(Folder),
+            });
+        break;
     }
 }
 
 function terserSelectDirToTreeNodes(dir: Dir): TreeOptionExt[] {
+    const dirNodes = dir.d.map(
+        (t): TreeOptionExt => ({
+            key   : t.n,
+            label : t.n.split(PathSeq).reverse()[0], // 获取最后一段路径
+            isLeaf: false,
+            prefix: () =>
+                h(NIcon, null, {
+                    default: () => h(Folder),
+                }),
+        })
+    );
 
-    const dirNodes = dir.d.map((t): TreeOptionExt => ({
-        key: t.n,
-        label: t.n.split(PathSeq).reverse()[0], // 获取最后一段路径
-        isLeaf: false,
-        prefix: () => h(NIcon, null, {
-            default: () => h(Folder)
-        }),
-    }));
-
-    const fileNodes = dir.f.map((t): TreeOptionExt => ({
-        key: dir.n + PathSeq + t.n,
-        label: t.n,
-        isLeaf: true,
-        meta: t,
-    }));
-
-
+    const fileNodes = dir.f.map(
+        (t): TreeOptionExt => ({
+            key   : dir.n + PathSeq + t.n,
+            label : t.n,
+            isLeaf: true,
+            meta  : t,
+        })
+    );
 
     return [...dirNodes, ...fileNodes];
 }

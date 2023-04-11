@@ -1,41 +1,42 @@
 <template>
- <div pt-4>
+  <div pt-4>
     <n-form
       ref="formRef"
       :label-width="80"
       :model="data"
     >
-    
-    <n-form-item label="查找关键词">
-        <n-input v-model:value="data.keyword"></n-input>
-    </n-form-item>
+      <n-form-item label="查找关键词">
+        <n-input v-model:value="data.keyword" />
+      </n-form-item>
 
       <n-form-item label="文件类型">
         <n-select
-         v-model:value="data.findType"
+          v-model:value="data.findType"
           :options="typeOptions"
         />
       </n-form-item>
     </n-form>
   </div>
-
 </template>
 <script lang="ts" setup>
-import { FileTreeFindForm } from '@/types';
-import { reactive, watch } from 'vue';
-
+import {
+    FileTreeFindForm
+} from "@/types";
+import {
+    reactive, watch
+} from "vue";
 
 defineOptions({
     name: "FileTreeFinderForm",
 });
 
 const props = defineProps<{
-    data: FileTreeFindForm
+    data: FileTreeFindForm;
 }>();
 
 // 解除响应式，防止改变父组件
 const data = reactive({
-    ...props.data
+    ...props.data,
 });
 
 const emit = defineEmits<{
@@ -45,14 +46,13 @@ const emit = defineEmits<{
 const typeOptions = [
     {
         label: "文件夹",
-        value:"dir",
+        value: "dir",
     },
     {
         label: "文件",
-        value:"file",
+        value: "file",
     },
 ];
-
 
 watch(data, v => emit("update:data", v));
 </script>

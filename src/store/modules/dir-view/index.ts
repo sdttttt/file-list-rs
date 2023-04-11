@@ -1,7 +1,12 @@
-import { Dir } from '@/rust';
-import { defineStore } from 'pinia'
-import { ref } from 'vue';
-
+import {
+    Dir
+} from "@/rust";
+import {
+    defineStore
+} from "pinia";
+import {
+    ref
+} from "vue";
 
 export const useDirViewStore = defineStore("dirView", () => {
     const currentDir = ref<Dir>(null);
@@ -13,5 +18,5 @@ export const useDirViewStore = defineStore("dirView", () => {
     return {
         currentDir,
         updateCurrentDirView,
-    }
+    };
 });

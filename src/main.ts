@@ -1,7 +1,11 @@
-import 'virtual:uno.css'
+import "virtual:uno.css";
 
-import { createApp } from "vue";
-import { setupStore } from "@/store"
+import {
+    createApp
+} from "vue";
+import {
+    setupStore
+} from "@/store";
 import "./styles.css";
 import App from "./App.vue";
 
