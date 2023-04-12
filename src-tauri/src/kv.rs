@@ -24,6 +24,7 @@ impl FileListDb {
         Self { db }
     }
 
+    #[allow(unused)]
     pub fn inner(self) -> Arc<sled::Db> {
         self.db.to_owned()
     }
@@ -44,10 +45,11 @@ impl FileListDb {
                 }
 
                 // 去掉本次路径的头, 必须是文件分隔符开头, 不然会出现以下情况：
-                // A:\\abc\\git # 匹配git下的子目录
-                // A:\\abc\\github # 该目录不是子目录，但是却命中了
-                // A:\\abc\\git\\hub # 这个才是子目录
-                if !ks[path.len()..].starts_with("\\") {
+                // A:\abc\git # 匹配git下的子目录
+                // A:\abc\github # 该目录不是子目录，但是却命中了
+                // A:\abc\git\hub # 这个才是子目录
+                // 但是也有例外: A:\ 盘符，盘符后的路径可以不跟随
+                if !ks[path.len()..].starts_with("\\") && !path.ends_with(":\\") {
                     continue;
                 }
 
@@ -115,8 +117,9 @@ impl FileListDb {
     }
 }
 
-pub fn create_force_file_db(file_path: &str) -> Result<(String, Arc<sled::Db>), anyhow::Error> {
-    let db_key = utils::hash(file_path);
+// 创建sled，如果有旧的会直接删掉
+pub fn create_file_db(file_path: &str) -> Result<(String, Arc<sled::Db>), anyhow::Error> {
+    let db_key = path_to_db_key(file_path);
     let mut file_db = FILE_DB_MAP.lock().unwrap();
 
     let db_path_str = db_path_prefix(&*db_key);
@@ -125,7 +128,14 @@ pub fn create_force_file_db(file_path: &str) -> Result<(String, Arc<sled::Db>), 
         fs::remove_dir_all(&db_path)?;
     }
 
-    let db = Arc::new(sled::open(db_path)?);
+    // 这里参数可以调整，可能和解析速度有关系
+    let db = Arc::new(
+        sled::Config::default()
+            .path(db_path)
+            .flush_every_ms(Some(1000)) // 多少时间和硬盘同步一次
+            .open()?,
+    );
+
     info!("create sled: {}", db_key);
     file_db.insert(db_key.to_owned(), db.to_owned());
     Ok((db_key, db))
@@ -135,13 +145,23 @@ pub fn file_db(db_key: &str) -> Result<Arc<sled::Db>, anyhow::Error> {
     let mut file_db = FILE_DB_MAP.lock().unwrap();
 
     if !file_db.contains_key(db_key) {
-        file_db.insert(db_key.to_owned(), Arc::new(sled::open(db_key)?));
+        file_db.insert(
+            db_key.to_owned(),
+            Arc::new(sled::open(db_path_prefix(&*db_key))?),
+        );
+        info!("open sled: {}", db_key);
     };
 
     info!("find sled: {}", db_key);
     Ok(file_db.get(db_key).map(|t| t.to_owned()).unwrap())
 }
 
+#[inline]
 pub fn db_path_prefix(path: &str) -> String {
     format!("{}{}", "db/", path)
+}
+
+#[inline]
+pub fn path_to_db_key(path: &str) -> String {
+    utils::hash(path)
 }

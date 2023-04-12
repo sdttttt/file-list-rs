@@ -4,7 +4,8 @@
 use std::{fs::OpenOptions, io::Read};
 
 use dir::IDir;
-use kv::{create_force_file_db, file_db, FileListDb};
+use history::{parse_history, RootAndDbKey};
+use kv::{create_file_db, file_db, path_to_db_key, FileListDb};
 use kv_parse::DirSKVParser;
 use log::*;
 use mem_parse::DirSMemParser;
@@ -13,6 +14,7 @@ use simplelog::*;
 
 mod dir;
 mod file;
+mod history;
 mod i18n;
 mod kv;
 mod kv_parse;
@@ -89,10 +91,30 @@ struct KvParseResponseRaw {
 #[tauri::command]
 fn kv_parse(path: String) -> BackendResponse<KvParseResponseRaw> {
     result_package::<KvParseResponseRaw>(|| {
+        info!("kv_parse: path = {}", path);
+        let his = parse_history();
+        {
+            // 解析记录, 这里划出一个生命周期是因为解析一般要很长时间，不能一直拿着锁
+            let his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
+            let key = path_to_db_key(&path);
+            // 有记录说明已经解析完成了
+            if let Some(root) = his_lock.find_root(&key) {
+                info!("has parse record: path = {}", path);
+                return Ok(KvParseResponseRaw {
+                    db_key: key,
+                    root_path: root.to_owned(),
+                });
+            }
+        }
+
         let f = OpenOptions::new().read(true).open(&path)?;
-        let (db_key, db) = create_force_file_db(&path)?;
+        let (db_key, db) = create_file_db(&path)?;
         let parser = DirSKVParser::new(db);
         let root_path = parser.parse(f)?;
+        // 将本次解析保存到记录
+        let mut his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
+        his_lock.add_parse_result(&root_path, &db_key);
+
         Ok(KvParseResponseRaw { db_key, root_path })
     })
 }
@@ -127,6 +149,26 @@ fn db_find_file(db_key: String, keyword: String) -> BackendResponse<Vec<String>>
     })
 }
 
+#[tauri::command]
+fn parse_records() -> BackendResponse<Vec<RootAndDbKey>> {
+    result_package::<Vec<RootAndDbKey>>(|| {
+        let his = parse_history();
+        let his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
+        let result =his_lock.h.clone();
+        Ok(result)
+    })
+}
+
+#[tauri::command]
+fn remove_record(db_key: String) -> BackendResponse<bool> {
+    result_package::<bool>(|| {
+        let his = parse_history();
+        let mut his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
+        his_lock.remove_root(&db_key);
+        Ok(true)
+    })
+}
+
 fn main() {
     init_log();
 
@@ -137,7 +179,9 @@ fn main() {
             kv_parse,
             db_select,
             db_find_dir,
-            db_find_file
+            db_find_file,
+            parse_records,
+            remove_record,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

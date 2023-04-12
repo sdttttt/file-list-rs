@@ -1,4 +1,4 @@
-use std::{fs::File, io::BufRead, io::BufReader, sync::Arc};
+use std::{fs::File, io::BufRead, io::BufReader, sync::{Arc}};
 
 use anyhow::bail;
 use lazy_static::lazy_static;
@@ -7,7 +7,7 @@ use regex::Regex;
 use crate::{
     dir::IDir,
     file::IFile,
-    i18n::{FsKeyword, Zh},
+    i18n::{KeywordLibray, Zh, match_lang},
     utils::{self},
 };
 // 有效的解析文本
@@ -38,8 +38,6 @@ use crate::{
 lazy_static! {
 // 中文匹配
 static ref REGEX_ZH: Regex = Regex::new(r"[\u4e00-\u9fa5]+").unwrap();
-// 英文匹配
-static ref REGEX_EN: Regex = Regex::new(r"[\u4e00-\u9fa5]+").unwrap();
 // 目录匹配
 static ref REGEX_DIR_PATH: Regex = Regex::new(r"(\w:\\){1}(\S){0,}").unwrap();
 // 匹配底部的数字部分
@@ -57,7 +55,7 @@ enum ParseMode {
 // 别问我两个解析器为什么不抽象，因为抽象太难了，除了核心部分的解析逻辑是相同的，数据保存以及读取的逻辑，以及提供给前端使用的接口完全不一样
 //基本可以看作一个独立的实现
 pub struct DirSKVParser {
-    keywords: Option<Box<dyn FsKeyword>>,
+    keywords: Option<Box<dyn KeywordLibray>>,
     mode: ParseMode,
     root_path: Option<String>,
     current_path: Option<String>,
@@ -93,12 +91,15 @@ impl DirSKVParser {
                     line_count += 1;
                     // 没有加载语言
                     if self.keywords.is_none() {
-                        self.load_language(line);
-                        if self.keywords.is_none() {
-                            if line_count > 3 {
-                                bail!("前三行都没有检测到该输出所使用的语言，退出。")
+                        // 对改行语言匹配，装载对应的关键词库
+                        match match_lang(line) {
+                            Some(k) => self.keywords = Some(k),
+                            None => {
+                                if line_count > 3 {
+                                    bail!("前三行都没有检测到该输出所使用的语言，退出。")
+                                }
+                                continue;
                             }
-                            continue;
                         }
                     }
 
@@ -200,17 +201,11 @@ impl DirSKVParser {
         Ok(())
     }
 
-    fn load_language(&mut self, line: &str) {
-        // 检查用的系统语言
-        if REGEX_ZH.is_match(line) {
-            self.keywords = Some(Box::new(Zh::default()));
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::kv::{create_force_file_db, FileListDb};
+    use crate::kv::{create_file_db, FileListDb};
 
     use super::*;
     use lazy_static::lazy_static;
@@ -224,7 +219,7 @@ mod tests {
     fn test_file_list() {
         let mut d = TEST_DATA_PATH.clone();
         d.push("test/list.txt");
-        let (_, db) = create_force_file_db(d.to_str().unwrap()).unwrap();
+        let (_, db) = create_file_db(d.to_str().unwrap()).unwrap();
         let file = File::open(d).unwrap();
         let f = DirSKVParser::new(db.to_owned());
         let root = f.parse(file).unwrap();

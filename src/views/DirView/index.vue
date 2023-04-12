@@ -28,7 +28,7 @@ import {
     storeToRefs
 } from "pinia";
 import {
-    computed, h, ref,unref, watch
+    computed, h, ref, unref, watch
 } from "vue";
 import {
     DataTableColumns
@@ -40,8 +40,7 @@ import {
     NIcon, TreeOption
 } from "naive-ui";
 import {
-    useElementSize,
-    useWindowSize
+    useElementSize, useWindowSize
 } from "@vueuse/core";
 
 const headerEl = ref(null);
@@ -52,12 +51,14 @@ const {
     height: windowHeight
 } = useWindowSize();
 
-const tableHeight = computed(() => windowHeight.value - headerHeight.value - 40);
+const tableHeight = computed(
+    () => windowHeight.value - headerHeight.value - 40
+);
 
 watch(tableHeight, v => {
     console.log(`headerHeight: ${headerHeight.value}`);
-    console.log(`windowHeight:${ windowHeight.value}`);
-    console.log(`tableHeight:${ v}`);
+    console.log(`windowHeight:${windowHeight.value}`);
+    console.log(`tableHeight:${v}`);
 });
 
 type DataItem = { path: string; size?: string; time?: string };

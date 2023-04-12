@@ -1,25 +1,38 @@
 <template>
   <n-space vertical>
-    <n-button
-      v-if="showFinder"
-      type="warning"
-      size="small"
-      @click="() => (showFinder = false)"
+    <n-grid
+      x-gap="6"
+      :cols="2"
     >
-      关闭查询树
-    </n-button>
-    <n-button
-      v-else
-      size="small"
-      type="info"
-      @click="handleOpenFinderForm"
-    >
-      查找
-    </n-button>
+      <n-gi>
+        <n-button
+          v-if="showFinder"
+          strong
+          secondary
+          type="warning"
+          style="width: 100%;"
+          @click="() => (showFinder = false)"
+        >
+          关闭查询树
+        </n-button>
+        <n-button
+          v-else
+          type="info"
+          strong
+          secondary
+          style="width: 100%;"
+          @click="handleOpenFinderForm"
+        >
+          查找
+        </n-button>
+      </n-gi>
+    </n-grid>
+
 
     <n-tree
       :data="showFinder ? finderDirTree : treeView"
       :node-props="treeNodeProps"
+      block-line
       @load="handleLoadDir"
       @update:expanded-keys="updatePrefixWithExpaned"
     />
@@ -39,6 +52,7 @@
     v-model:show="showFinderFileResult"
     preset="dialog"
     title="符合结果的文件路径"
+    style="width: 800px;"
   >
     <n-list>
       <n-list-item
@@ -53,11 +67,11 @@
 
 <script lang="ts" setup>
 import {
-    useTreeView,
-    useFinder,
     handleLoadDir,
     treeNodeProps,
     updatePrefixWithExpaned,
+    useFinder,
+    useTreeView,
 } from "./states";
 import FileTreeFinderForm from "@/components/FileTreeFinderForm/index.vue";
 const props = defineProps<{

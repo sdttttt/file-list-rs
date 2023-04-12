@@ -7,7 +7,7 @@ use regex::Regex;
 use crate::{
     dir::IDir,
     file::IFile,
-    i18n::{FsKeyword, Zh},
+    i18n::{KeywordLibray, Zh},
     utils::{self},
 };
 // 有效的解析文本
@@ -54,7 +54,7 @@ enum ParseMode {
 
 // dir /s *.* 内存解析器
 pub struct DirSMemParser {
-    keywords: Option<Box<dyn FsKeyword>>,
+    keywords: Option<Box<dyn KeywordLibray>>,
     mode: ParseMode,
     current_path: Option<String>,
     root: Option<IDir>,

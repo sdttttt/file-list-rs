@@ -14,6 +14,11 @@ export type KvParseResponseRaw = {
     rootPath: string;
 };
 
+export type RootAndDbKey = {
+    root: string;
+    dbKey: string;
+};
+
 /**
  * 内存解析模式和Sled解析模式返回的Dir结构会不一样。
  * 第一是在n (path)字段上:
@@ -90,6 +95,18 @@ export async function dbFindFile(
     return await invoke("db_find_file", {
         dbKey,
         keyword,
+    });
+}
+
+export async function parseRecords(): Promise<BackendResponse<RootAndDbKey[]>> {
+    return await invoke("parse_records");
+}
+
+export async function removeRecord(
+    dbKey: string
+): Promise<BackendResponse<void>> {
+    return await invoke("remove_record", {
+        dbKey,
     });
 }
 

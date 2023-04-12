@@ -8,7 +8,7 @@ import {
     TreeNodeProps, TreeOption
 } from "naive-ui/es/tree/src/interface";
 import {
-    ref, onMounted, watch, Ref
+    Ref, onMounted, ref, watch
 } from "vue";
 
 const KeySep = "$R$";

@@ -1,11 +1,11 @@
 import {
-    Dir, dbSelect, unwrap, dbFindDir, dbFindFile
+    Dir, dbFindDir, dbFindFile, dbSelect, unwrap
 } from "@/rust";
 import {
     FileTreeFindForm, TreeOptionExt
 } from "@/types";
 import {
-    Ref, ref, unref, watch, computed, h
+    Ref, computed, h, ref, unref, watch
 } from "vue";
 import {
     useDirViewStore
@@ -84,7 +84,8 @@ export function useFinder() {
         }
 
         if (!dbKey) {
-            window.$message.warning("dbKey不存在。");
+            window.$message.warning("dbKey不存在, 请先解析文件，或者从解析历史中恢复。");
+            return;
         }
 
         switch (findType) {
