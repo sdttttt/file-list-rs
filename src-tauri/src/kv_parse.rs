@@ -78,10 +78,8 @@ impl DirSKVParser {
         // 行数计数器
         let mut line_count = 0;
         for line_result in buf_lines {
-            match line_result {
-                Err(e) => bail!("{}", e),
+                let line = &line_result?;
 
-                Ok(ref line) => {
                     // 跳过空行
                     if line.trim().is_empty() {
                         continue;
@@ -151,8 +149,7 @@ impl DirSKVParser {
                         let file_info = IFile::from_file_line_vec(files_line_vec);
                         self.insert_file(file_info)?;
                     }
-                }
-            }
+            
         }
 
         self.db.flush()?;

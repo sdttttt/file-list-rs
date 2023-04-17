@@ -1,6 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::future::Future;
 use std::{fs::OpenOptions, io::Read};
 
 use dir::IDir;
@@ -54,8 +55,8 @@ impl<T> BackendResponse<T> {
 }
 
 // 包装
-fn result_package<T>(f: impl FnOnce() -> anyhow::Result<T>) -> BackendResponse<T> {
-    BackendResponse::result(f())
+async fn result_package<T>(f:  impl Future<Output = anyhow::Result<T>>) -> BackendResponse<T> {
+    BackendResponse::result(f.await)
 }
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
@@ -72,12 +73,12 @@ fn greet() -> BackendResponse<String> {
 }
 
 #[tauri::command]
-fn mem_parse(path: String) -> BackendResponse<Option<IDir>> {
-    result_package::<Option<IDir>>(|| {
+async fn mem_parse(path: String) -> BackendResponse<Option<IDir>> {
+    result_package::<Option<IDir>>(async {
         let f = OpenOptions::new().read(true).open(path)?;
         let parser = DirSMemParser::new();
         Ok(parser.parse(f)?)
-    })
+    }).await
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -89,8 +90,8 @@ struct KvParseResponseRaw {
 }
 
 #[tauri::command]
-fn kv_parse(path: String) -> BackendResponse<KvParseResponseRaw> {
-    result_package::<KvParseResponseRaw>(|| {
+async fn kv_parse(path: String) -> BackendResponse<KvParseResponseRaw> {
+    result_package::<KvParseResponseRaw>(async {
         info!("kv_parse: path = {}", path);
         let his = parse_history();
         {
@@ -116,57 +117,57 @@ fn kv_parse(path: String) -> BackendResponse<KvParseResponseRaw> {
         his_lock.add_parse_result(&root_path, &db_key);
 
         Ok(KvParseResponseRaw { db_key, root_path })
-    })
+    }).await
 }
 
 #[tauri::command]
-fn db_select(db_key: String, path: String) -> BackendResponse<Option<IDir>> {
-    result_package::<Option<IDir>>(|| {
+async fn db_select(db_key: String, path: String) -> BackendResponse<Option<IDir>> {
+    result_package::<Option<IDir>>(async {
         info!("db_key: {}, path: {}", db_key, path);
         let db = file_db(&db_key)?;
         let file_list_db = FileListDb::new(db);
         Ok(Some(file_list_db.dir_info(&path)?))
-    })
+    }).await
 }
 
 #[tauri::command]
-fn db_find_dir(db_key: String, keyword: String) -> BackendResponse<Vec<IDir>> {
-    result_package::<Vec<IDir>>(|| {
+async fn db_find_dir(db_key: String, keyword: String) -> BackendResponse<Vec<IDir>> {
+    result_package::<Vec<IDir>>(async {
         info!("db_key: {}, dir keyword: {}", db_key, keyword);
         let db = file_db(&db_key)?;
         let file_list_db = FileListDb::new(db);
         Ok(file_list_db.find_dir(&keyword)?)
-    })
+    }).await
 }
 
 #[tauri::command]
-fn db_find_file(db_key: String, keyword: String) -> BackendResponse<Vec<String>> {
-    result_package::<Vec<String>>(|| {
+async fn db_find_file(db_key: String, keyword: String) -> BackendResponse<Vec<String>> {
+    result_package::<Vec<String>>(async {
         info!("db_key: {}, file keyword: {}", db_key, keyword);
         let db = file_db(&db_key)?;
         let file_list_db = FileListDb::new(db);
         Ok(file_list_db.find_file(&keyword)?)
-    })
+    }).await
 }
 
 #[tauri::command]
-fn parse_records() -> BackendResponse<Vec<RootAndDbKey>> {
-    result_package::<Vec<RootAndDbKey>>(|| {
+async fn parse_records() -> BackendResponse<Vec<RootAndDbKey>> {
+    result_package::<Vec<RootAndDbKey>>(async {
         let his = parse_history();
         let his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
         let result =his_lock.h.clone();
         Ok(result)
-    })
+    }).await
 }
 
 #[tauri::command]
-fn remove_record(db_key: String) -> BackendResponse<bool> {
-    result_package::<bool>(|| {
+async fn remove_record(db_key: String) -> BackendResponse<bool> {
+    result_package::<bool>(async {
         let his = parse_history();
         let mut his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
         his_lock.remove_root(&db_key);
         Ok(true)
-    })
+    }).await
 }
 
 fn main() {
