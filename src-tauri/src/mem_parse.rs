@@ -111,7 +111,7 @@ impl DirSMemParser {
                     }
 
                     // 匹配到文件夹大小
-                    if line.contains(self.keywords.as_ref().unwrap().size())
+                    if line.contains(self.keywords.as_ref().unwrap().file_count())
                         && self.mode == ParseMode::MatchDir
                     {
                         let sizes = REGEX_SIZE

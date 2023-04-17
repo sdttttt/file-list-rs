@@ -3,12 +3,15 @@ use regex::Regex;
 
 lazy_static! {
     // 中文匹配
-    static ref REGEX_ZH: Regex = Regex::new(r"[\u4e00-\u9fa5]+").unwrap();
+    static ref REGEX_ZH: Regex = Regex::new(r"驱动器|系统|卷").unwrap();
+
+    // 英文匹配
+    static ref REGEX_EN: Regex = Regex::new(r"Volume in drive").unwrap();
 }
 
 pub trait KeywordLibray {
     fn match_lang(line: &str) -> bool where Self: Sized; 
-    fn size(&self) -> &'static str;
+    fn file_count(&self) -> &'static str;
     fn dir(&self) -> &'static str;
 }
 
@@ -16,6 +19,8 @@ pub trait KeywordLibray {
 pub fn match_lang(line: &str) -> Option<Box<dyn KeywordLibray>> {
     if Zh::match_lang(line) {
         Some(Box::new(Zh::default()))
+    }else if En::match_lang(line) {
+        Some(Box::new(En::default()))
     } else {
         None
     }
@@ -33,7 +38,7 @@ impl KeywordLibray for Zh {
     }
 
     #[inline]
-    fn size(&self) -> &'static str {
+    fn file_count(&self) -> &'static str {
         "个文件"
     }
 
@@ -52,11 +57,13 @@ impl KeywordLibray for En {
         false
     }
 
-    fn size(&self) -> &'static str {
-        ""
+    fn file_count(&self) -> &'static str {
+        "File(s)"
     }
 
     fn dir(&self) -> &'static str {
-        ""
+        "Directory of"
     }
 }
+
+

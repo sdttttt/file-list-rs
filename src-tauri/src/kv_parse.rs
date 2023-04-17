@@ -41,7 +41,7 @@ static ref REGEX_ZH: Regex = Regex::new(r"[\u4e00-\u9fa5]+").unwrap();
 // 目录匹配
 static ref REGEX_DIR_PATH: Regex = Regex::new(r"(\w:\\){1}(\S){0,}").unwrap();
 // 匹配底部的数字部分
-static ref REGEX_SIZE: Regex = Regex::new(r"[\d,]+").unwrap();
+static ref REGEX_NUMBER: Regex = Regex::new(r"[\d,]+").unwrap();
 
 }
 
@@ -122,17 +122,18 @@ impl DirSKVParser {
                     }
 
                     // 匹配到文件夹大小
-                    if line.contains(self.keywords.as_ref().unwrap().size())
+                    if line.contains(self.keywords.as_ref().unwrap().file_count())
                         && self.mode == ParseMode::MatchDir
                     {
-                        let sizes = REGEX_SIZE
+                        let sizes = REGEX_NUMBER
                             .find_iter(line)
                             .map(|t| t.as_str().trim())
                             .collect::<Vec<&str>>();
                         // 必须是2个，一个是文件数量，一个是文件夹
                         debug_assert_eq!(sizes.len(), 2);
-                        self.mode = ParseMode::Empty;
                         self.write_dir_size(sizes[1])?;
+
+                        self.mode = ParseMode::Empty;
                         continue;
                     }
 

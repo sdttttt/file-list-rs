@@ -44,7 +44,7 @@ export function useMainView() {
             backendMode.value = fileSelectionForm.value.backend;
 
             window.$message.loading(
-                "如果是大文件，慢慢熬吧。"
+                "如果是超过100MB的文件, 请确保硬盘空间足够, 然后耐心等待.."
             );
             const start = new Date().getTime();
             switch (backendMode.value) {
