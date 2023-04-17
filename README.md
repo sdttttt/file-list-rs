@@ -13,11 +13,14 @@
 - rustc 1.68.1
 
 ```
+sudo apt-get install libssl-dev # linux
 pnpm tauri build
 ```
 
-构建物在`src-tauri/target/release`目录下。
-所有平台的安装包在`src-tauri/target/release/bundle`目录下。
+构建物在`src-tauri/target/release`目录下，
+安装包在`src-tauri/target/release/bundle`目录下。
+
+> tauri 无法交叉编译，每次需要在对应的平台上编译.
 
 ## Bechmark
 
