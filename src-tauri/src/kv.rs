@@ -9,6 +9,7 @@ use crate::{dir::IDir, file::IFile, utils};
 use anyhow::bail;
 use lazy_static::lazy_static;
 use log::*;
+use regex::Regex;
 
 lazy_static! {
 // sled 存放解析结果
@@ -75,7 +76,9 @@ impl FileListDb {
     }
 
     // 查找文件夹关键词
-    pub fn find_dir(&self, keyword: &str) -> anyhow::Result<Vec<IDir>> {
+    pub fn find_dir(&self, reg_exp: &str) -> anyhow::Result<Vec<IDir>> {
+        let reg = Regex::new(reg_exp)?;
+
         let mut result_dirs = vec![];
         for kv_result in self.db.iter() {
             if let Ok((ref k, _)) = kv_result {
@@ -84,7 +87,7 @@ impl FileListDb {
                 let mut path_seq = ks.split("\\").collect::<Vec<&str>>();
                 path_seq.reverse();
 
-                if path_seq[0].contains(keyword) {
+                if reg.is_match(path_seq[0]) {
                     result_dirs.push(IDir::new(ks));
                 }
             }
@@ -93,19 +96,21 @@ impl FileListDb {
         Ok(result_dirs)
     }
 
-    pub fn find_file(&self, keyword: &str) -> anyhow::Result<Vec<String>> {
+    pub fn find_file(&self, reg_exp: &str) -> anyhow::Result<Vec<String>> {
+        let reg = Regex::new(reg_exp)?;
+
         let mut result_file_path = vec![];
         for kv_result in self.db.iter() {
             if let Ok((ref k, ref v)) = kv_result {
                 let ks = utils::ivec_to_str(k);
                 let vs = utils::ivec_to_str(v);
-                if vs.contains(keyword) {
+                if reg.is_match(vs) {
                     let dir = serde_json::from_str::<IDir>(vs)?;
                     let match_files = dir
                         .files
                         .iter()
                         // 过滤出文件名包含关键词的文件信息
-                        .filter(|t| t.name.contains(keyword))
+                        .filter(|t| reg.is_match(&t.name))
                         .collect::<Vec<&IFile>>();
                     for file in match_files {
                         result_file_path.push(format!("{}\\{}", ks, file.name))

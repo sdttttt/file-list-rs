@@ -131,22 +131,22 @@ async fn db_select(db_key: String, path: String) -> BackendResponse<Option<IDir>
 }
 
 #[tauri::command]
-async fn db_find_dir(db_key: String, keyword: String) -> BackendResponse<Vec<IDir>> {
+async fn db_find_dir(db_key: String, reg_exp: String) -> BackendResponse<Vec<IDir>> {
     result_package::<Vec<IDir>>(async {
-        info!("db_key: {}, dir keyword: {}", db_key, keyword);
+        info!("db_key: {}, dir keyword: {}", db_key, reg_exp);
         let db = file_db(&db_key)?;
         let file_list_db = FileListDb::new(db);
-        Ok(file_list_db.find_dir(&keyword)?)
+        Ok(file_list_db.find_dir(&reg_exp)?)
     }).await
 }
 
 #[tauri::command]
-async fn db_find_file(db_key: String, keyword: String) -> BackendResponse<Vec<String>> {
+async fn db_find_file(db_key: String, reg_exp: String) -> BackendResponse<Vec<String>> {
     result_package::<Vec<String>>(async {
-        info!("db_key: {}, file keyword: {}", db_key, keyword);
+        info!("db_key: {}, file keyword: {}", db_key, reg_exp);
         let db = file_db(&db_key)?;
         let file_list_db = FileListDb::new(db);
-        Ok(file_list_db.find_file(&keyword)?)
+        Ok(file_list_db.find_file(&reg_exp)?)
     }).await
 }
 

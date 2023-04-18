@@ -5,7 +5,7 @@
       :label-width="80"
       :model="data"
     >
-      <n-form-item label="查找关键词">
+      <n-form-item label="正则/关键词">
         <n-input v-model:value="data.keyword" />
       </n-form-item>
 

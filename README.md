@@ -24,8 +24,4 @@ pnpm tauri build
 
 ## Bechmark
 
-- CPU: i9 12900H
-- Mem: 32GB
-- IO: 200MB/s
-
-70MB 解析需要 40秒.
+- 70MB 解析需要 40秒 (disk: 200MB/s)

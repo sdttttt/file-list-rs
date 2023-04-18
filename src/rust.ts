@@ -79,22 +79,22 @@ export async function dbSelect(
 // 查询文件夹，用于sled解析。
 export async function dbFindDir(
     dbKey: string,
-    keyword: string
+    regExp: string
 ): Promise<BackendResponse<Dir[]>> {
     return await invoke("db_find_dir", {
         dbKey,
-        keyword,
+        regExp,
     });
 }
 
 // 查询文件，用于sled解析。
 export async function dbFindFile(
     dbKey: string,
-    keyword: string
+    regExp: string
 ): Promise<BackendResponse<string[]>> {
     return await invoke("db_find_file", {
         dbKey,
-        keyword,
+        regExp,
     });
 }
 
