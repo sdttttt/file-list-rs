@@ -5,7 +5,14 @@
         <template #header>
           {{ currentDir?.n || "未选择文件夹" }}
         </template>
-        大小: {{ currentDir?.s || "无" }}
+        <n-space>
+          <span>
+            大小: {{ currentDir?.s || "无" }}
+          </span>
+          <span>
+            条目: {{ dirData.length || 0 }}
+          </span>
+        </n-space>
       </n-card>
     </n-layout-header>
     <n-layout-content>
