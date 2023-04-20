@@ -66,7 +66,7 @@
 
   <n-modal
     v-model:show="showHistoryList"
-    preset="dialog"
+    preset="card"
     title="解析记录"
     negative-text="关闭"
     style="width: 800px;"

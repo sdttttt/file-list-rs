@@ -10,7 +10,7 @@ import {
     h
 } from "vue";
 import {
-    RootAndDbKey
+    HistoryRecordItem
 } from "@/rust";
 import {
     DataTableColumns, NButton
@@ -22,7 +22,7 @@ defineOptions({
 
 const props = withDefaults(
     defineProps<{
-        data: RootAndDbKey[];
+        data: HistoryRecordItem[];
     }>(),
     {
         data: () => [],
@@ -30,18 +30,22 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-    (e: "selected", t: RootAndDbKey): void;
-    (e: "remove", t: RootAndDbKey): void;
+    (e: "selected", t: HistoryRecordItem): void;
+    (e: "remove", t: HistoryRecordItem): void;
 }>();
 
-const columns: DataTableColumns<RootAndDbKey> = [
+const columns: DataTableColumns<HistoryRecordItem> = [
+    {
+        title: "别名",
+        key  : "name",
+    },
+    {
+        title: "解析命令",
+        key  : "command",
+    },
     {
         title: "根路径",
         key  : "root",
-    },
-    {
-        title: "DbKey",
-        key  : "dbKey",
     },
     {
         title: "Action",

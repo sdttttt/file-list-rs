@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "baseUrl": "./",
+        "baseUrl": ".",
         "target": "ESNext",
         "useDefineForClassFields": true,
         "module": "ESNext",
@@ -17,7 +17,15 @@
             "DOM"
         ],
         "types": [
-            "unplugin-vue-macros/macros-global"
+            "./auto-imports.d.ts",
+            "./components.d.ts",
+            "vite/client",
+            "vue/ref-macros",
+            "naive-ui/volar",
+            "unplugin-vue-macros/macros-global",
+            "unplugin-icons/types/vue",
+            "unplugin-vue-define-options/macros-global",
+            "@vue-macros/reactivity-transform/macros-global"
         ],
         "skipLibCheck": true,
         "paths": {

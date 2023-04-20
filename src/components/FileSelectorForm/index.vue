@@ -4,7 +4,18 @@
       ref="formRef"
       :label-width="80"
       :model="data"
+      :rules="rules"
     >
+      <n-form-item
+        label="别名"
+        path="name"
+      >
+        <n-input
+          v-model:value="data.name"
+          placeholder="本次解析别名, 唯一"
+        />
+      </n-form-item>
+
       <n-form-item label="本地文件">
         <div
           w-100
@@ -51,7 +62,7 @@ import {
     FileSelectForm, ParseBackend, ParseMode
 } from "@/types";
 import {
-    UploadFileInfo
+    SelectOption
 } from "naive-ui";
 import {
     open
@@ -74,10 +85,15 @@ const emit = defineEmits<{
     (e: "update:data", v: FileSelectForm): void;
 }>();
 
-const typeOptions = [
+const typeOptions: SelectOption[] = [
     {
-        label: "dir /s *.*",
+        label: ParseMode.DirS,
         value: ParseMode.DirS,
+    },
+
+    {
+        label: ParseMode.LsALHR,
+        value: ParseMode.LsALHR,
     },
 ];
 
@@ -94,11 +110,18 @@ const backendOptions = [
     },
 ];
 
+const rules = {
+    name: {
+        required: true,
+        message : "必须填写一个别名",
+        trigger : "blur"
+    },
+};
+
 async function handleOpenFileSelector() {
     const selected = await open({
         multiple: false,
     });
-
     data.path = selected as string;
 }
 

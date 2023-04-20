@@ -6,7 +6,8 @@ import {
 } from "naive-ui";
 
 export enum ParseMode {
-    DirS = "0",
+    DirS = "dir /s *.*",
+    LsALHR = "ls -alhR",
 }
 
 export enum ParseBackend {
@@ -15,6 +16,7 @@ export enum ParseBackend {
 }
 
 export type FileSelectForm = {
+    name: string;
     path: string;
     command: ParseMode;
     backend: ParseBackend;

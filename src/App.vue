@@ -1,6 +1,9 @@
 <template>
   <NProdiver>
-    <div class="container">
+    <div
+      flex-1
+      flex-row
+    >
       <Main />
     </div>
   </NProdiver>
@@ -12,11 +15,6 @@ import NProdiver from "./NProdiver.vue";
 </script>
 
 <style scoped>
-.main-view {
-    display: flex;
-    flex-direction: row;
-}
-
 .logo.vite:hover {
     filter: drop-shadow(0 0 2em #747bff);
 }

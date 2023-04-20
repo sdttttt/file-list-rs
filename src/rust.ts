@@ -2,6 +2,13 @@
 import {
     invoke
 } from "@tauri-apps/api/tauri";
+import {
+    ParseMode
+} from "./types";
+
+export enum CommandMode {
+    DirS = ""
+}
 
 export type BackendResponse<T> = {
     raw: T;
@@ -9,12 +16,9 @@ export type BackendResponse<T> = {
     msg: string;
 };
 
-export type KvParseResponseRaw = {
-    dbKey: string;
-    rootPath: string;
-};
-
-export type RootAndDbKey = {
+export type HistoryRecordItem = {
+    name: string,
+    command: ParseMode,
     root: string;
     dbKey: string;
 };
@@ -42,7 +46,10 @@ export async function greetRust(): Promise<BackendResponse<String>> {
     return await invoke("greet");
 }
 
-// 内存解析
+/**
+ * 内存解析
+ * @deprecated
+ */
 export async function memParse(path: string): Promise<BackendResponse<Dir>> {
     return await invoke("mem_parse", {
         path,
@@ -55,9 +62,13 @@ export async function memParse(path: string): Promise<BackendResponse<Dir>> {
  * 这个很重要，要好好保存，除了路径查询，这个还是整个db的键
  */
 export async function kvParse(
+    name: String,
+    command: String,
     path: string
-): Promise<BackendResponse<KvParseResponseRaw>> {
+): Promise<BackendResponse<HistoryRecordItem>> {
     return await invoke("kv_parse", {
+        name,
+        command,
         path,
     });
 }
@@ -98,7 +109,7 @@ export async function dbFindFile(
     });
 }
 
-export async function parseRecords(): Promise<BackendResponse<RootAndDbKey[]>> {
+export async function parseRecords(): Promise<BackendResponse<HistoryRecordItem[]>> {
     return await invoke("parse_records");
 }
 

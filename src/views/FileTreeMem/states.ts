@@ -5,11 +5,9 @@ import {
     TreeOptionExt
 } from "@/types";
 import {
-    TreeNodeProps, TreeOption
+    TreeOption
 } from "naive-ui/es/tree/src/interface";
-import {
-    Ref, onMounted, ref, watch
-} from "vue";
+
 
 const KeySep = "$R$";
 const FileEnd = "F";

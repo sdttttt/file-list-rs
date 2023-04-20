@@ -4,10 +4,11 @@
 use std::future::Future;
 use std::{fs::OpenOptions, io::Read};
 
+use anyhow::bail;
 use dir::IDir;
-use history::{parse_history, RootAndDbKey};
+use history::{parse_history, ParseRecordItem};
 use kv::{create_file_db, file_db, path_to_db_key, FileListDb};
-use kv_parse::DirSKVParser;
+use dir_s_parse::DirSKVParser;
 use log::*;
 use mem_parse::DirSMemParser;
 use simplelog::Config as LogConfig;
@@ -18,7 +19,7 @@ mod file;
 mod history;
 mod i18n;
 mod kv;
-mod kv_parse;
+mod dir_s_parse;
 mod mem_parse;
 mod utils;
 
@@ -81,30 +82,19 @@ async fn mem_parse(path: String) -> BackendResponse<Option<IDir>> {
     }).await
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-struct KvParseResponseRaw {
-    #[serde(rename = "dbKey")]
-    pub db_key: String,
-    #[serde(rename = "rootPath")]
-    pub root_path: String,
-}
 
 #[tauri::command]
-async fn kv_parse(path: String) -> BackendResponse<KvParseResponseRaw> {
-    result_package::<KvParseResponseRaw>(async {
+async fn kv_parse(name: String, command: String, path: String) -> BackendResponse<ParseRecordItem> {
+    result_package::<ParseRecordItem>(async {
         info!("kv_parse: path = {}", path);
         let his = parse_history();
         {
             // 解析记录, 这里划出一个生命周期是因为解析一般要很长时间，不能一直拿着锁
             let his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
-            let key = path_to_db_key(&path);
             // 有记录说明已经解析完成了
-            if let Some(root) = his_lock.find_root(&key) {
-                info!("has parse record: path = {}", path);
-                return Ok(KvParseResponseRaw {
-                    db_key: key,
-                    root_path: root.to_owned(),
-                });
+            if  his_lock.contains_name(&name) {
+                info!("Duplicate name: {}", name);
+                bail!("已经存在该名的解析结果.")
             }
         }
 
@@ -114,9 +104,9 @@ async fn kv_parse(path: String) -> BackendResponse<KvParseResponseRaw> {
         let root_path = parser.parse(f)?;
         // 将本次解析保存到记录
         let mut his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
-        his_lock.add_parse_result(&root_path, &db_key);
-
-        Ok(KvParseResponseRaw { db_key, root_path })
+        let new_parse_record = ParseRecordItem::new(&name, &command, &root_path, &db_key);
+        his_lock.add_parse_result(new_parse_record.to_owned());
+        Ok(new_parse_record)
     }).await
 }
 
@@ -151,8 +141,8 @@ async fn db_find_file(db_key: String, reg_exp: String) -> BackendResponse<Vec<St
 }
 
 #[tauri::command]
-async fn parse_records() -> BackendResponse<Vec<RootAndDbKey>> {
-    result_package::<Vec<RootAndDbKey>>(async {
+async fn parse_records() -> BackendResponse<Vec<ParseRecordItem>> {
+    result_package::<Vec<ParseRecordItem>>(async {
         let his = parse_history();
         let his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
         let result =his_lock.h.clone();

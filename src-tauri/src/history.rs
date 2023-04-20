@@ -21,11 +21,13 @@ pub fn parse_history() -> Arc<Mutex<ParseRecord>>  {
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct ParseRecord {
-    pub h: Vec<RootAndDbKey>,
+    pub h: Vec<ParseRecordItem>,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-pub struct RootAndDbKey {
+pub struct ParseRecordItem {
+    pub name: String,
+    pub command: String,
     pub root: String,
     #[serde(rename = "dbKey")]
     pub db_key: String,
@@ -61,18 +63,24 @@ impl ParseRecord {
         }
     }
 
-    pub fn add_parse_result(&mut self, root: &str, db_key:&str) {
-        self.h.push(RootAndDbKey::new(root.to_owned(), db_key.to_owned()));
+    pub fn add_parse_result(&mut self,t: ParseRecordItem) {
+        self.h.push(t);
         self.sync();
     }
 
-    pub fn find_root(&self, db_key: &str) -> Option<&str> {
-        let result = self.h.iter().filter(|t| t.db_key == db_key).collect::<Vec<&RootAndDbKey>>();
+    pub fn get(&self, name: &str) -> Option<&ParseRecordItem> {
+        let result = self.h.iter().filter(|t| t.name == name).collect::<Vec<&ParseRecordItem>>();
+
         if result.is_empty() {
             None
         } else {
-            Some(&result[0].root)
+            Some(result[0])
         }
+    }
+
+    pub fn contains_name(&self, name: &str) -> bool {
+        let result = self.h.iter().filter(|t| t.name == name).collect::<Vec<&ParseRecordItem>>();
+        !result.is_empty()
     }
 
     pub fn remove_root(&mut self, db_key: &str) {
@@ -108,8 +116,13 @@ impl ParseRecord {
     }
 }
 
-impl RootAndDbKey {
-    fn new(root: String, db_key: String) -> Self {
-        Self { root, db_key }
+impl ParseRecordItem {
+    pub fn new(name: &str, command: &str, root: &str ,db_key: &str) -> Self {
+        let name = name.to_owned();
+        let command = command.to_owned();
+        let root = root.to_owned();
+        let db_key = db_key.to_owned();
+
+        Self { name, command, root, db_key }
     }
 }

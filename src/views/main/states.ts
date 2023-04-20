@@ -6,7 +6,7 @@ import {
 } from "@/types";
 import {
     Dir,
-    RootAndDbKey,
+    HistoryRecordItem,
     kvParse,
     memParse,
     parseRecords,
@@ -25,6 +25,7 @@ export function useMainView() {
         const showFileSelection = ref(false);
 
         const fileSelectionForm = ref<FileSelectForm>({
+            name   : "",
             path   : "",
             command: ParseMode.DirS,
             backend: ParseBackend.Sled,
@@ -37,10 +38,22 @@ export function useMainView() {
         }
 
         async function handleParseFileByPath(): Promise<boolean> {
-            if (!fileSelectionForm.value.path) {
+            const {
+                name = "",
+                command,
+                path = ""
+            } = unref(fileSelectionForm);
+
+            if ("" === name.trim()) {
+                window.$message?.warning("必须填写一个别名");
+                return false;
+            }
+
+            if ("" === path.trim()) {
                 window.$message?.warning("空路径");
                 return false;
             }
+
             backendMode.value = fileSelectionForm.value.backend;
 
             window.$message.loading(
@@ -62,14 +75,18 @@ export function useMainView() {
                 break;
             }
             case ParseBackend.Sled: {
+
                 const sledResult = unwrap(
-                    await kvParse(fileSelectionForm.value.path)
+                    await kvParse(
+                        name,
+                        command,
+                        path)
                 );
                 if (sledResult) {
                     const end = new Date().getTime();
                     window.$message?.success(`解析完成: ${end - start}ms`);
                     console.log(sledResult);
-                    root.value = sledResult.rootPath;
+                    root.value = sledResult.root;
                     dbKey.value = sledResult.dbKey;
                     return true;
                 }
@@ -92,7 +109,7 @@ export function useMainView() {
 
     function useHistory() {
         const showHistoryList = ref(false);
-        const historyList = ref<RootAndDbKey[]>([]);
+        const historyList = ref<HistoryRecordItem[]>([]);
 
         const refreshParserecords = async () => {
             const list = unwrap(await parseRecords());
@@ -105,7 +122,7 @@ export function useMainView() {
             showHistoryList.value = true;
         }
 
-        async function handleRecover(kv: RootAndDbKey) {
+        async function handleRecover(kv: HistoryRecordItem) {
             dbKey.value = kv.dbKey;
             root.value = kv.root;
             showHistoryList.value = false;
@@ -113,7 +130,7 @@ export function useMainView() {
 
         async function handleRemoveHistory({
             dbKey
-        }: RootAndDbKey) {
+        }: HistoryRecordItem) {
             const result = await removeRecord(dbKey);
             if (!result.succ) {
                 window.$message.error(result.msg);

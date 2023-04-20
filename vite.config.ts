@@ -54,8 +54,15 @@ export default defineConfig(async () => ({
                 },
             ],
         }),
+
         Components({
-            resolvers: [NaiveUiResolver()],
+            resolvers : [NaiveUiResolver()],
+            extensions: ["vue", "tsx"],
+            dirs      : [
+                "src/components",
+                "src/views/*/components"
+            ],
+            allowOverrides: false,
         }),
 
         UnoCSS(),
@@ -87,8 +94,10 @@ export default defineConfig(async () => ({
         target:
             "windows" == process.env.TAURI_PLATFORM ? "chrome105" : "safari13",
         // don't minify for debug builds
-        minify   : !process.env.TAURI_DEBUG ? "esbuild" : false,
+        minify               : !process.env.TAURI_DEBUG ? "esbuild" : false,
         // produce sourcemaps for debug builds
-        sourcemap: Boolean(process.env.TAURI_DEBUG),
+        sourcemap            : Boolean(process.env.TAURI_DEBUG),
+        reportCompressedSize : true,
+        chunkSizeWarningLimit: 1024,
     },
 }));
