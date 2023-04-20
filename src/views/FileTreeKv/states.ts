@@ -16,23 +16,28 @@ import {
 import {
     NIcon, TreeOption
 } from "naive-ui";
+import {
+    useCurrentRecordStore
+} from "@/store/modules/current-record";
+import {
+    storeToRefs
+} from "pinia";
 
 const PathSeq = "\\";
-let dbKey = "";
-export function useTreeView(
-    props: Readonly<
-        Omit<
-            {
-                root: string;
-                dbKey: string;
-            },
-            never
-        > & {}
-    >
-) {
+
+export function useTreeView() {
+    const currentRecordStore = useCurrentRecordStore();
+
+    const {
+        record
+    } = storeToRefs(currentRecordStore);
+
     const treeView = ref<TreeOptionExt[]>([]);
 
-    watch([() => props.root, () => props.dbKey], ([root, newDbKey]) => {
+    watch(record, ({
+        root
+    }) => {
+        console.log("记录更新");
         treeView.value = [
             {
                 key   : root,
@@ -44,16 +49,16 @@ export function useTreeView(
                     }),
             },
         ];
-        dbKey = newDbKey;
     });
 
     return {
         treeView,
-        handleLoadDir,
     };
 }
 
 export function useFinder() {
+    const currentRecordStore = useCurrentRecordStore();
+
     // 显示搜索树
     const showFinder = ref(false);
     // 显示搜索输入表单
@@ -83,14 +88,14 @@ export function useFinder() {
             return;
         }
 
-        if (!dbKey) {
-            window.$message.warning("dbKey不存在, 请先解析文件，或者从解析历史中恢复。");
+        if (!currentRecordStore.record) {
+            window.$message.warning("当前没有记录, 请先解析文件，或者从解析历史中恢复。");
             return;
         }
 
         switch (findType) {
         case "dir": {
-            const dirsResult = await dbFindDir(dbKey, keyword);
+            const dirsResult = await dbFindDir(currentRecordStore.record.name, keyword);
             if (dirsResult.succ) {
                 window.$message.info(
                     `找到 ${dirsResult.raw.length} 个符合结果的目录`
@@ -105,7 +110,7 @@ export function useFinder() {
             break;
         }
         case "file": {
-            const filesResult = await dbFindFile(dbKey, keyword);
+            const filesResult = await dbFindFile(currentRecordStore.record.name, keyword);
             if (filesResult.succ) {
                 finderFileResult.value = filesResult.raw;
                 window.$message.info(
@@ -130,31 +135,39 @@ export function useFinder() {
     };
 }
 
-export async function handleLoadDir(op: TreeOptionExt): Promise<void> {
-    if (!op.meta) {
-        op.meta = unwrap(await dbSelect(dbKey, op.key as string));
-    }
-    op.children = terserSelectDirToTreeNodes(op.meta as Dir);
+export function handleLoadDirFunc() {
+    const currentRecordStore = useCurrentRecordStore();
+
+    return async (op: TreeOptionExt): Promise<void> => {
+        if (!op.meta) {
+            op.meta = unwrap(await dbSelect(currentRecordStore.record.name, op.key as string));
+        }
+        op.children = terserSelectDirToTreeNodes(op.meta as Dir);
+    };
 }
 
-export function treeNodeProps({
-    option
-}: { option: TreeOptionExt }) {
-    return {
-        onClick: async () => {
-            if (!option.meta) {
-                option.meta = unwrap(
-                    await dbSelect(dbKey, option.key as string)
-                );
-            }
-            const dirViewStroe = useDirViewStore();
-            if (option.isLeaf) {
+export function treeNodePropsFunc() {
+    const currentRecordStore = useCurrentRecordStore();
+
+    return ({
+        option
+    }: { option: TreeOptionExt }) => {
+        return {
+            onClick: async () => {
+                if (!option.meta) {
+                    option.meta = unwrap(
+                        await dbSelect(currentRecordStore.record.name, option.key as string)
+                    );
+                }
+                const dirViewStroe = useDirViewStore();
+                if (option.isLeaf) {
                 // 叶子节点说明是文件了，不需要展示
-                return;
-            }
-            dirViewStroe.updateCurrentDirView(option.meta as Dir);
-            console.log(dirViewStroe.currentDir);
-        },
+                    return;
+                }
+                dirViewStroe.updateCurrentDirView(option.meta as Dir);
+                console.log(dirViewStroe.currentDir);
+            },
+        };
     };
 }
 

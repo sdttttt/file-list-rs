@@ -40,6 +40,8 @@ export type File = {
     n: string; // name
     s: string; // size
     t: string; // time
+
+    c?: string; // chmod only unix
 };
 
 export async function greetRust(): Promise<BackendResponse<String>> {
@@ -78,33 +80,33 @@ export async function kvParse(
  * sled 解析完成后，整个数据会保存在硬盘上，通过Rust的后端来访问这些数据
  */
 export async function dbSelect(
-    dbKey: string,
+    name: string,
     path: string
 ): Promise<BackendResponse<Dir>> {
     return await invoke("db_select", {
-        dbKey,
+        name,
         path,
     });
 }
 
 // 查询文件夹，用于sled解析。
 export async function dbFindDir(
-    dbKey: string,
+    name: string,
     regExp: string
 ): Promise<BackendResponse<Dir[]>> {
     return await invoke("db_find_dir", {
-        dbKey,
+        name,
         regExp,
     });
 }
 
 // 查询文件，用于sled解析。
 export async function dbFindFile(
-    dbKey: string,
+    name: string,
     regExp: string
 ): Promise<BackendResponse<string[]>> {
     return await invoke("db_find_file", {
-        dbKey,
+        name,
         regExp,
     });
 }
@@ -114,10 +116,10 @@ export async function parseRecords(): Promise<BackendResponse<HistoryRecordItem[
 }
 
 export async function removeRecord(
-    dbKey: string
+    name: string
 ): Promise<BackendResponse<void>> {
     return await invoke("remove_record", {
-        dbKey,
+        name,
     });
 }
 

@@ -13,13 +13,13 @@ import {
     removeRecord,
     unwrap,
 } from "@/rust";
+import {
+    useCurrentRecordStore
+} from "@/store/modules/current-record";
 
 export function useMainView() {
-    // Mem解析的组件参数
-    const fileTree = ref<Dir | undefined>(undefined);
-    // Sled解析的组件参数
-    const root = ref("");
-    const dbKey = ref("");
+
+    const currentRecordStore = useCurrentRecordStore();
 
     function useFileSelector() {
         const showFileSelection = ref(false);
@@ -59,35 +59,22 @@ export function useMainView() {
             window.$message.loading(
                 "如果是超过100MB的文件, 请确保硬盘空间足够, 然后耐心等待.."
             );
+
             const start = new Date().getTime();
             switch (backendMode.value) {
-            case ParseBackend.Mem: {
-                const memResult = unwrap(
-                    await memParse(fileSelectionForm.value.path)
-                );
-                if (memResult) {
-                    const end = new Date().getTime();
-                    window.$message?.success(`解析完成: ${end - start}ms`);
-                    console.log(memResult);
-                    fileTree.value = memResult;
-                    return true;
-                }
-                break;
-            }
             case ParseBackend.Sled: {
-
-                const sledResult = unwrap(
+                const resultRecord = unwrap(
                     await kvParse(
                         name,
                         command,
                         path)
                 );
-                if (sledResult) {
+
+                if (resultRecord) {
                     const end = new Date().getTime();
                     window.$message?.success(`解析完成: ${end - start}ms`);
-                    console.log(sledResult);
-                    root.value = sledResult.root;
-                    dbKey.value = sledResult.dbKey;
+                    console.log(resultRecord);
+                    currentRecordStore.updateCurrentRecord(resultRecord);
                     return true;
                 }
                 break;
@@ -103,7 +90,6 @@ export function useMainView() {
             handleOpenFileSelector,
             fileSelectionForm,
             handleParseFileByPath,
-            backendMode,
         };
     }
 
@@ -122,16 +108,15 @@ export function useMainView() {
             showHistoryList.value = true;
         }
 
-        async function handleRecover(kv: HistoryRecordItem) {
-            dbKey.value = kv.dbKey;
-            root.value = kv.root;
+        async function handleRecover(t: HistoryRecordItem) {
+            currentRecordStore.updateCurrentRecord(t);
             showHistoryList.value = false;
         }
 
         async function handleRemoveHistory({
-            dbKey
+            name
         }: HistoryRecordItem) {
-            const result = await removeRecord(dbKey);
+            const result = await removeRecord(name);
             if (!result.succ) {
                 window.$message.error(result.msg);
                 return;
@@ -154,8 +139,5 @@ export function useMainView() {
         useFileSelector,
         useHistory,
 
-        fileTree,
-        root,
-        dbKey,
     };
 }

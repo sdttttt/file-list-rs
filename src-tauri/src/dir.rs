@@ -2,11 +2,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     file::IFile,
-    utils::{self, join_path_vec},
+    utils::{self, join_path_vec},os::Os, 
 };
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IDir {
+    #[serde(skip)]
+    os: Os,
+
     #[serde(rename = "n")] // 尽可能减少JSON体积
     pub path: String, // 除了根路径，子路径一律不包含“/”路径分隔符
     #[serde(rename = "f")]
@@ -18,12 +21,13 @@ pub struct IDir {
 }
 
 impl IDir {
-    pub fn new(path: &str) -> Self {
+    pub fn new(path: &str, os: Os) -> Self {
         Self {
             path: path.to_owned(),
             files: vec![],
             dirs: vec![],
             size: None,
+            os,
         }
     }
 
@@ -62,7 +66,7 @@ impl IDir {
         debug_assert!(path.starts_with(&self.path));
         // 去掉自己以外的
         let sub_path = &path[self.path.len()..];
-        let sub_path_vec = utils::split_path(sub_path);
+        let sub_path_vec = utils::split_path(sub_path, &self.os);
         // 为空，说明自己就是最后的子路径
         if sub_path.is_empty() || sub_path_vec.is_empty() {
             if let Some(op_fn) = op {
@@ -81,11 +85,12 @@ impl IDir {
 
         if sub_dir_index == -1 {
             // 如果不存在该目录就创建，然后交给这个目录去解析下面的结构
-            let dir = IDir::new(&sub_path_vec[0]);
+            let dir = IDir::new(&sub_path_vec[0],  self.os);
             self.dirs.push(dir);
             // push进去下标肯定是最后一位
             sub_dir_index = (self.dirs.len() - 1) as i32;
         }
-        self.dirs[sub_dir_index as usize].parse_path_operation(&join_path_vec(sub_path_vec), op)
+
+        self.dirs[sub_dir_index as usize].parse_path_operation(&join_path_vec(sub_path_vec, &self.os), op)
     }
 }

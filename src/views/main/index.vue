@@ -40,11 +40,7 @@
           </n-gi>
         </n-grid>
 
-        <FileTreeKv
-          v-if="backendMode == ParseBackend.Sled"
-          :root="root"
-          :db-key="dbKey"
-        />
+        <FileTreeKv />
       </n-space>
     </n-layout-sider>
 
@@ -88,9 +84,6 @@ import ParseRecords from "@/components/ParseRecords/index.vue";
 import {
     useMainView
 } from "./states";
-import {
-    ParseBackend
-} from "@/types";
 defineOptions({
     name: "Main",
 });
@@ -98,10 +91,6 @@ defineOptions({
 const {
     useFileSelector,
     useHistory,
-
-    fileTree,
-    root,
-    dbKey,
 } = useMainView();
 
 const {
@@ -109,7 +98,6 @@ const {
     handleOpenFileSelector,
     fileSelectionForm,
     handleParseFileByPath,
-    backendMode,
 } = useFileSelector();
 
 const {

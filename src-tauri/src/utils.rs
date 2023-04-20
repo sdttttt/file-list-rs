@@ -1,24 +1,20 @@
-#[cfg(target_os = "windows")]
 use std::hash::{Hash, Hasher};
 
 use sled::IVec;
 
-const FS_PAT: &str = "\\";
-
-#[cfg(target_os = "unix")]
-const FS_PAT: &str = "/";
+use crate::{os::Os};
 
 #[inline]
-pub fn split_path(path: &str) -> Vec<String> {
-    path.split(FS_PAT)
+pub fn split_path(path: &str, os: &Os) -> Vec<String> {    
+    path.split(os.pat())
         .map(|t| t.to_owned())
         .filter(|t| !t.is_empty())
         .collect()
 }
 
 #[inline]
-pub fn join_path_vec(vec: Vec<String>) -> String {
-    vec.join(FS_PAT)
+pub fn join_path_vec(vec: Vec<String>, os: &Os) -> String {
+    vec.join(os.pat())
 }
 
 // 分割文件行

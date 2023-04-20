@@ -1,5 +1,6 @@
 use std::{sync::{Mutex, Arc}, fs::{OpenOptions, File}, io::{Read, Write}, path::PathBuf};
 
+use anyhow::{bail};
 use lazy_static::lazy_static;
 
 const HISTORY_FILE_NAME: &str = "history.json"; 
@@ -15,8 +16,54 @@ lazy_static! {
     };
 }
 
-pub fn parse_history() -> Arc<Mutex<ParseRecord>>  {
+fn history_store() -> Arc<Mutex<ParseRecord>>  {
    HISTORY.to_owned()
+}
+
+pub fn all_history_records() -> Vec<ParseRecordItem> {
+    let his = history_store();
+    let his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
+    let result = his_lock.h.to_owned();
+    result
+}
+
+pub fn get_history_record(name: &str) -> anyhow::Result<Option<ParseRecordItem>> {
+    let store = history_store();
+        let parse_record = {
+            let his_lock = store.lock().unwrap();
+            match  his_lock.get(&name) {
+                Some(t) => {
+                    Some(t.to_owned())
+                },
+                None => None,
+            }
+        };
+    Ok(parse_record)
+}
+
+pub fn contains_history_record(name: &str) -> anyhow::Result<bool> {
+    let store = history_store();
+
+            // 解析记录, 这里划出一个生命周期是因为解析一般要很长时间，不能一直拿着锁
+            let his_lock = store.lock().expect("获取解析历史锁出错，这也行啊");
+            // 有记录说明已经解析完成了
+             Ok(his_lock.contains_name(&name)) 
+}
+
+pub fn remove_history_record(name: &str) -> anyhow::Result<()> {
+    let his = history_store();
+        let mut his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
+        his_lock.remove_root(&name);
+        Ok(())
+}
+
+pub fn add_history_record(item: ParseRecordItem) -> anyhow::Result<()> {
+    let his = history_store();
+    
+    // 将本次解析保存到记录
+    let mut his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
+    his_lock.add_parse_result(item);
+    Ok(())
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -83,9 +130,9 @@ impl ParseRecord {
         !result.is_empty()
     }
 
-    pub fn remove_root(&mut self, db_key: &str) {
+    pub fn remove_root(&mut self, name: &str) {
         for (idx, t) in self.h.iter().enumerate() {
-            if t.db_key == db_key {
+            if t.name == name {
                 self.h.remove(idx);
                 break;
             }

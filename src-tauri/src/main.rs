@@ -7,21 +7,23 @@ use std::{fs::OpenOptions, io::Read};
 
 use anyhow::bail;
 use dir::IDir;
-use history::{parse_history, ParseRecordItem};
-use kv::{create_file_db, file_db, path_to_db_key, FileListDb};
-use dir_s_parse::DirSKVParser;
+use dir_s_parse::DirSParser;
+use history::{all_history_records, remove_history_record, ParseRecordItem};
+use kv::{create_file_db, file_db, FileListDb};
 use log::*;
-use mem_parse::DirSMemParser;
 use simplelog::Config as LogConfig;
 use simplelog::*;
 
+use crate::history::{add_history_record, contains_history_record, get_history_record};
+
 mod dir;
+mod dir_s_parse;
 mod file;
 mod history;
 mod i18n;
 mod kv;
-mod dir_s_parse;
-mod mem_parse;
+mod ls_alhr_parse;
+mod os;
 mod utils;
 
 pub trait Parser {
@@ -61,7 +63,7 @@ impl<T> BackendResponse<T> {
 }
 
 // 包装
-async fn result_package<T>(f:  impl Future<Output = anyhow::Result<T>>) -> BackendResponse<T> {
+async fn result_package<T>(f: impl Future<Output = anyhow::Result<T>>) -> BackendResponse<T> {
     BackendResponse::result(f.await)
 }
 
@@ -79,98 +81,95 @@ fn greet() -> BackendResponse<String> {
 }
 
 #[tauri::command]
-async fn mem_parse(path: String) -> BackendResponse<Option<IDir>> {
-    result_package::<Option<IDir>>(async {
-        let f = OpenOptions::new().read(true).open(path)?;
-        let parser = DirSMemParser::new();
-        Ok(parser.parse(f)?)
-    }).await
-}
-
-
-#[tauri::command]
 async fn kv_parse(name: String, command: String, path: String) -> BackendResponse<ParseRecordItem> {
     result_package::<ParseRecordItem>(async {
         info!("kv_parse: path = {}", path);
-        let his = parse_history();
-        {
-            // 解析记录, 这里划出一个生命周期是因为解析一般要很长时间，不能一直拿着锁
-            let his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
-            // 有记录说明已经解析完成了
-            if  his_lock.contains_name(&name) {
-                info!("Duplicate name: {}", name);
-                bail!("已经存在该名的解析结果.")
-            }
+
+        if contains_history_record(&name)? {
+            info!("Duplicate name: {}", name);
+            bail!("已经存在该名的解析结果.")
         }
 
         let f = OpenOptions::new().read(true).open(&path)?;
         let (db_key, db) = create_file_db(&path)?;
 
         let mut parser = match &*command {
-            DirSKVParser::COMMAND => {
-                Box::new(DirSKVParser::new(db))
-            },
-            _ => bail!("不支持的解析命令")
-        }; 
+            DirSParser::COMMAND => Box::new(DirSParser::new(db)),
+            _ => bail!("不支持的解析命令"),
+        };
 
         let root_path = parser.parse(f)?;
 
-        // 将本次解析保存到记录
-        let mut his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
         let new_parse_record = ParseRecordItem::new(&name, &command, &root_path, &db_key);
-        his_lock.add_parse_result(new_parse_record.to_owned());
+        // 将本次解析保存到记录
+        add_history_record(new_parse_record.to_owned())?;
         Ok(new_parse_record)
-    }).await
+    })
+    .await
 }
 
 #[tauri::command]
-async fn db_select(db_key: String, path: String) -> BackendResponse<Option<IDir>> {
+async fn db_select(name: String, path: String) -> BackendResponse<Option<IDir>> {
     result_package::<Option<IDir>>(async {
-        info!("db_key: {}, path: {}", db_key, path);
-        let db = file_db(&db_key)?;
-        let file_list_db = FileListDb::new(db);
+        let parse_record = match get_history_record(&name)? {
+            Some(t) => t,
+            None => bail!("该解析记录已经被删除或者丢失.."),
+        };
+        info!("db_key: {}, path: {}", &parse_record.db_key, path);
+        let db = file_db(&parse_record.db_key)?;
+        let file_list_db = FileListDb::new(db, &parse_record.command)?;
         Ok(Some(file_list_db.dir_info(&path)?))
-    }).await
+    })
+    .await
 }
 
 #[tauri::command]
-async fn db_find_dir(db_key: String, reg_exp: String) -> BackendResponse<Vec<IDir>> {
+async fn db_find_dir(name: String, reg_exp: String) -> BackendResponse<Vec<IDir>> {
     result_package::<Vec<IDir>>(async {
-        info!("db_key: {}, dir keyword: {}", db_key, reg_exp);
-        let db = file_db(&db_key)?;
-        let file_list_db = FileListDb::new(db);
+        let parse_record = match get_history_record(&name)? {
+            Some(t) => t,
+            None => bail!("该解析记录已经被删除或者丢失.."),
+        };
+
+        info!("db_key: {}, dir keyword: {}", &parse_record.db_key, reg_exp);
+        let db = file_db(&parse_record.db_key)?;
+        let file_list_db = FileListDb::new(db, &parse_record.command)?;
         Ok(file_list_db.find_dir(&reg_exp)?)
-    }).await
+    })
+    .await
 }
 
 #[tauri::command]
-async fn db_find_file(db_key: String, reg_exp: String) -> BackendResponse<Vec<String>> {
+async fn db_find_file(name: String, reg_exp: String) -> BackendResponse<Vec<String>> {
     result_package::<Vec<String>>(async {
-        info!("db_key: {}, file keyword: {}", db_key, reg_exp);
-        let db = file_db(&db_key)?;
-        let file_list_db = FileListDb::new(db);
+        let parse_record = match get_history_record(&name)? {
+            Some(t) => t,
+            None => bail!("该解析记录已经被删除或者丢失.."),
+        };
+
+        info!(
+            "db_key: {}, file keyword: {}",
+            &parse_record.db_key, reg_exp
+        );
+        let db = file_db(&parse_record.db_key)?;
+        let file_list_db = FileListDb::new(db, &parse_record.command)?;
         Ok(file_list_db.find_file(&reg_exp)?)
-    }).await
+    })
+    .await
 }
 
 #[tauri::command]
 async fn parse_records() -> BackendResponse<Vec<ParseRecordItem>> {
-    result_package::<Vec<ParseRecordItem>>(async {
-        let his = parse_history();
-        let his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
-        let result =his_lock.h.clone();
-        Ok(result)
-    }).await
+    result_package::<Vec<ParseRecordItem>>(async { Ok(all_history_records()) }).await
 }
 
 #[tauri::command]
-async fn remove_record(db_key: String) -> BackendResponse<bool> {
+async fn remove_record(name: String) -> BackendResponse<bool> {
     result_package::<bool>(async {
-        let his = parse_history();
-        let mut his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
-        his_lock.remove_root(&db_key);
+        remove_history_record(&name)?;
         Ok(true)
-    }).await
+    })
+    .await
 }
 
 fn main() {
@@ -179,7 +178,6 @@ fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             greet,
-            mem_parse,
             kv_parse,
             db_select,
             db_find_dir,

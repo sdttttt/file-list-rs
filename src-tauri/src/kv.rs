@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::{dir::IDir, file::IFile, utils};
+use crate::{dir::IDir, file::IFile, utils, os::Os};
 use anyhow::bail;
 use lazy_static::lazy_static;
 use log::*;
@@ -13,16 +13,22 @@ use regex::Regex;
 
 lazy_static! {
 // sled 存放解析结果
+// k = db_key, v = db
 static ref FILE_DB_MAP: Mutex<HashMap<String, Arc<sled::Db>>> = Mutex::new(HashMap::new());
 }
 
 pub struct FileListDb {
+    os: Os,
     db: Arc<sled::Db>,
 }
 
 impl FileListDb {
-    pub fn new(db: Arc<sled::Db>) -> FileListDb {
-        Self { db }
+    pub fn new(db: Arc<sled::Db>, command: &str) -> anyhow::Result<FileListDb> {
+        let os = Os::from_command(command)?;
+        Ok(Self {
+            os,
+            db
+         })
     }
 
     #[allow(unused)]
@@ -62,7 +68,7 @@ impl FileListDb {
                     == 1;
 
                 if is_sub_dir {
-                    dirs.push(IDir::new(ks));
+                    dirs.push(IDir::new(ks, self.os));
                 }
             }
         }
@@ -88,7 +94,7 @@ impl FileListDb {
                 path_seq.reverse();
 
                 if reg.is_match(path_seq[0]) {
-                    result_dirs.push(IDir::new(ks));
+                    result_dirs.push(IDir::new(ks, self.os,));
                 }
             }
         }

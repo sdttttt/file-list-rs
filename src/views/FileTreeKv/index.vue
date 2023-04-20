@@ -28,7 +28,6 @@
       </n-gi>
     </n-grid>
 
-
     <n-tree
       :data="showFinder ? finderDirTree : treeView"
       :node-props="treeNodeProps"
@@ -54,34 +53,40 @@
     title="符合结果的文件路径"
     style="width: 800px;"
   >
-    <n-list>
-      <n-list-item
-        v-for="t in finderFileResult"
-        :key="t"
-      >
-        {{ t }}
-      </n-list-item>
-    </n-list>
+    <n-table striped>
+      <thead>
+        <tr>
+          <th>路径</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          v-for="t in finderFileResult"
+          :key="t"
+        >
+          <td>{{ t }}</td>
+        </tr>
+      </tbody>
+    </n-table>
   </n-modal>
 </template>
 
 <script lang="ts" setup>
 import {
-    handleLoadDir,
-    treeNodeProps,
+    handleLoadDirFunc,
+    treeNodePropsFunc,
     updatePrefixWithExpaned,
     useFinder,
     useTreeView,
 } from "./states";
 import FileTreeFinderForm from "@/components/FileTreeFinderForm/index.vue";
-const props = defineProps<{
-    root: string;
-    dbKey: string;
-}>();
 
 const {
     treeView
-} = useTreeView(props);
+} = useTreeView();
+
+const handleLoadDir = handleLoadDirFunc();
+const treeNodeProps = treeNodePropsFunc();
 const {
     showFinder,
     handleOpenFinderForm,

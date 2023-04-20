@@ -33,6 +33,7 @@ declare module '@vue/runtime-core' {
     NNotificationProvider: typeof import('naive-ui')['NNotificationProvider']
     NSelect: typeof import('naive-ui')['NSelect']
     NSpace: typeof import('naive-ui')['NSpace']
+    NTable: typeof import('naive-ui')['NTable']
     NTree: typeof import('naive-ui')['NTree']
     ParseRecords: typeof import('./src/components/ParseRecords/index.vue')['default']
   }
