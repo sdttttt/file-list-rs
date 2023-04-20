@@ -8,7 +8,7 @@ use crate::{
     dir::IDir,
     file::IFile,
     i18n::{KeywordLibray, match_lang},
-    utils::{self},
+    utils::{self}, Parser,
 };
 // 有效的解析文本
 //C:\Users\HP\.vscode\extensions\ms-python.vscode-pylance-2022.11.20\dist\typeshed-fallback\stdlib\email 的目录
@@ -63,6 +63,9 @@ pub struct DirSKVParser {
 }
 
 impl DirSKVParser {
+
+    pub const COMMAND: &str = "dir /s *.*";
+
     pub fn new(db: Arc<sled::Db>) -> Self {
         Self {
             root_path: None,
@@ -73,7 +76,55 @@ impl DirSKVParser {
         }
     }
 
-    pub fn parse(mut self, f: File) -> anyhow::Result<String> {
+  
+
+    fn find_dir(&mut self) -> Result<(), anyhow::Error> {
+        let path = self.current_path.as_ref().unwrap();
+        if !self.db.contains_key(path)? {
+            // 初始化一个新的Dir，序列化插入
+            let dir = IDir::new(path);
+            self.db.insert(path, serde_json::to_vec(&dir)?)?;
+        }
+        Ok(())
+    }
+
+    fn write_dir_size(&mut self, size: &str) -> Result<(), anyhow::Error> {
+        let path = self.current_path.as_ref().unwrap();
+        match self.db.get(path)? {
+            Some(ref iv) => {
+                let s = utils::ivec_to_str(iv);
+                let mut dir = serde_json::from_str::<IDir>(s)?;
+                dir.size = Some(size.to_owned());
+                self.db.insert(path, serde_json::to_vec(&dir)?)?;
+            }
+            None => {
+                bail!("目录键不存在？离谱！{}", path)
+            }
+        }
+        Ok(())
+    }
+
+    fn insert_file(&mut self, file: IFile) -> Result<(), anyhow::Error> {
+        let path = self.current_path.as_ref().unwrap();
+        match self.db.get(path)? {
+            Some(ref iv) => {
+                let s = utils::ivec_to_str(iv);
+                let mut dir = serde_json::from_str::<IDir>(s)?;
+                dir.files.push(file);
+                self.db.insert(path, serde_json::to_vec(&dir)?)?;
+            }
+            None => {
+                bail!("目录键不存在？离谱！{}", path)
+            }
+        }
+        Ok(())
+    }
+
+}
+
+
+impl Parser  for DirSKVParser {
+     fn parse(&mut self, f: File) -> anyhow::Result<String> {
         let buf_lines = BufReader::new(f).lines();
         // 行数计数器
         let mut line_count = 0;
@@ -154,51 +205,8 @@ impl DirSKVParser {
         }
 
         self.db.flush()?;
-        Ok(self.root_path.expect("没有根路径？绝对不可能！"))
+        Ok(self.root_path.to_owned().expect("没有根路径？绝对不可能！"))
     }
-
-    fn find_dir(&mut self) -> Result<(), anyhow::Error> {
-        let path = self.current_path.as_ref().unwrap();
-        if !self.db.contains_key(path)? {
-            // 初始化一个新的Dir，序列化插入
-            let dir = IDir::new(path);
-            self.db.insert(path, serde_json::to_vec(&dir)?)?;
-        }
-        Ok(())
-    }
-
-    fn write_dir_size(&mut self, size: &str) -> Result<(), anyhow::Error> {
-        let path = self.current_path.as_ref().unwrap();
-        match self.db.get(path)? {
-            Some(ref iv) => {
-                let s = utils::ivec_to_str(iv);
-                let mut dir = serde_json::from_str::<IDir>(s)?;
-                dir.size = Some(size.to_owned());
-                self.db.insert(path, serde_json::to_vec(&dir)?)?;
-            }
-            None => {
-                bail!("目录键不存在？离谱！{}", path)
-            }
-        }
-        Ok(())
-    }
-
-    fn insert_file(&mut self, file: IFile) -> Result<(), anyhow::Error> {
-        let path = self.current_path.as_ref().unwrap();
-        match self.db.get(path)? {
-            Some(ref iv) => {
-                let s = utils::ivec_to_str(iv);
-                let mut dir = serde_json::from_str::<IDir>(s)?;
-                dir.files.push(file);
-                self.db.insert(path, serde_json::to_vec(&dir)?)?;
-            }
-            None => {
-                bail!("目录键不存在？离谱！{}", path)
-            }
-        }
-        Ok(())
-    }
-
 }
 
 #[cfg(test)]
@@ -219,8 +227,8 @@ mod tests {
         d.push("test/list.txt");
         let (_, db) = create_file_db(d.to_str().unwrap()).unwrap();
         let file = File::open(d).unwrap();
-        let f = DirSKVParser::new(db.to_owned());
-        let root = f.parse(file).unwrap();
+        let mut f = DirSKVParser::new(db.to_owned());
+        let _ = f.parse(file).unwrap();
         let file_list = FileListDb::new(db);
         // println!("{:#?}", file_list.dir_info(&root).unwrap());
         println!("{:#?}", file_list.find_dir("git"));

@@ -1,6 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::fs::File;
 use std::future::Future;
 use std::{fs::OpenOptions, io::Read};
 
@@ -22,6 +23,10 @@ mod kv;
 mod dir_s_parse;
 mod mem_parse;
 mod utils;
+
+pub trait Parser {
+    fn parse(&mut self, f: File) -> anyhow::Result<String>;
+}
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct BackendResponse<T> {
@@ -100,8 +105,16 @@ async fn kv_parse(name: String, command: String, path: String) -> BackendRespons
 
         let f = OpenOptions::new().read(true).open(&path)?;
         let (db_key, db) = create_file_db(&path)?;
-        let parser = DirSKVParser::new(db);
+
+        let mut parser = match &*command {
+            DirSKVParser::COMMAND => {
+                Box::new(DirSKVParser::new(db))
+            },
+            _ => bail!("不支持的解析命令")
+        }; 
+
         let root_path = parser.parse(f)?;
+
         // 将本次解析保存到记录
         let mut his_lock = his.lock().expect("获取解析历史锁出错，这也行啊");
         let new_parse_record = ParseRecordItem::new(&name, &command, &root_path, &db_key);
