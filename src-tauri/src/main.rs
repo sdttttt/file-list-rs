@@ -3,6 +3,7 @@
 
 use std::fs::File;
 use std::future::Future;
+use std::io::{BufReader, BufRead};
 use std::{fs::OpenOptions, io::Read};
 
 use anyhow::bail;
@@ -14,7 +15,9 @@ use log::*;
 use simplelog::Config as LogConfig;
 use simplelog::*;
 
+use crate::command::ParseCommand;
 use crate::history::{add_history_record, contains_history_record, get_history_record};
+use crate::ls_alhr_parse::LsAlhrParser;
 
 mod dir;
 mod dir_s_parse;
@@ -25,9 +28,24 @@ mod kv;
 mod ls_alhr_parse;
 mod os;
 mod utils;
+mod command;
 
 pub trait Parser {
-    fn parse(&mut self, f: File) -> anyhow::Result<String>;
+
+    fn parse(&mut self, f: File) -> anyhow::Result<()> {
+        let buf_lines = BufReader::new(f).lines();
+        // 行数计数器
+        let mut line_number = 0_usize;
+        for line_result in buf_lines {
+                let line = &line_result?;
+                line_number += 1;
+                self.parse_line(line.trim(), &line_number)?;
+        };
+        Ok(())
+    }
+    
+    fn parse_line(&mut self, line: &str, line_number: &usize) -> anyhow::Result<()>;
+    fn root_path(&mut self) -> anyhow::Result<String>;
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -93,14 +111,21 @@ async fn kv_parse(name: String, command: String, path: String) -> BackendRespons
         let f = OpenOptions::new().read(true).open(&path)?;
         let (db_key, db) = create_file_db(&path)?;
 
-        let mut parser = match &*command {
-            DirSParser::COMMAND => Box::new(DirSParser::new(db)),
-            _ => bail!("不支持的解析命令"),
+        let parse_command = ParseCommand::try_from(command)?;
+        let mut parser: Box<dyn Parser> = match parse_command {
+            ParseCommand::DirS => Box::new(DirSParser::new(db)),
+            ParseCommand::LsAlhr => Box::new(LsAlhrParser::new(db)),
         };
 
-        let root_path = parser.parse(f)?;
+        parser.parse(f)?;
+        let root_path = parser.root_path()?;
 
-        let new_parse_record = ParseRecordItem::new(&name, &command, &root_path, &db_key);
+        let new_parse_record = ParseRecordItem::new(
+            &name, 
+            &String::from(parse_command), 
+            &root_path,
+             &db_key
+            );
         // 将本次解析保存到记录
         add_history_record(new_parse_record.to_owned())?;
         Ok(new_parse_record)

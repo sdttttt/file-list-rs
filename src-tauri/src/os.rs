@@ -1,32 +1,34 @@
-use crate::{dir_s_parse::DirSParser, ls_alhr_parse::LsAlhrParser};
-use anyhow::bail;
-use log::*;
-const WINDOWS_PAT: &str = "\\";
-const UNIX_PAT: &str = "/";
+use crate::{command::ParseCommand};
 
-
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default,PartialEq ,Clone, Copy)]
 pub enum Os {
     Windows,
     #[default] Unix
 }
 
 impl Os {
-    pub fn from_command(command: &str) -> anyhow::Result<Self> {
-        match &*command {
-            DirSParser::COMMAND => Ok(Os::Windows),
-            LsAlhrParser::COMMAND => Ok(Os::Unix),
-            _ => {
-                error!("意外的命令: {}", command);
-                bail!(format!("意外的命令: {}", command));
-            },
+    pub const WINDOWS_DISK_SYMBOL: &str = ":\\";
+
+    const WINDOWS_PAT: &str = "\\";
+    const UNIX_PAT: &str = "/";
+
+    pub fn from_command_str(cmd: &str) -> anyhow::Result<Self> {
+        let command = ParseCommand::try_from(cmd.to_owned())?;
+        Ok(Self::from_command(&command))
+    }
+
+    pub fn from_command(command: &ParseCommand) -> Self {
+        match command {
+            ParseCommand::DirS => Os::Windows,
+            ParseCommand::LsAlhr => Os::Unix,
         } 
     }
 
+    #[inline]
     pub fn pat(&self) -> &'static str {
         match *self {
-            Self::Windows => WINDOWS_PAT,
-            Self::Unix => UNIX_PAT,
+            Self::Windows => Self::WINDOWS_PAT,
+            Self::Unix => Self::UNIX_PAT,
         }
     }
 }

@@ -17,7 +17,7 @@
     </n-layout-header>
     <n-layout-content>
       <n-data-table
-        :columns="dirSColumns"
+        :columns="columns"
         size="small"
         :data="dirData"
         :bordered="false"
@@ -29,20 +29,23 @@
 
 <script lang="ts" setup>
 import {
-    useDirViewStore
+    useDirViewStore,
+    useCurrentRecordStore
 } from "@/store";
 import {
     storeToRefs
 } from "pinia";
+import dirSColumns from "./dir-s-columns";
+import lsAlhrColumns from "./ls-alhr-columns";
 import {
-    computed, h, ref, unref, watch
-} from "vue";
-import dirSColumns, {
     DataItem
-} from "./dir-s-columns";
+} from "./types";
 import {
     useElementSize, useWindowSize
 } from "@vueuse/core";
+import {
+    ParseMode
+} from "@/types";
 
 const headerEl = ref(null);
 const {
@@ -63,20 +66,43 @@ watch(tableHeight, v => {
 });
 
 const {
-    currentDir
+    currentDir,
 } = storeToRefs(useDirViewStore());
+
+const {
+    systemPat,
+    record
+} = storeToRefs(useCurrentRecordStore());
+
+const columns = computed(() => {
+    switch (record.value?.command) {
+    case ParseMode.DirS: {
+        return dirSColumns;
+    }
+    case ParseMode.LsALHR: {
+        return lsAlhrColumns;
+    }
+    default: {
+        return dirSColumns;
+    }
+    }
+});
 
 const dirData = computed((): DataItem[] => {
     if (!currentDir.value) {
         return [];
     }
-    const dirs = currentDir.value.d.map(t => ({
-        path: t.n.split("\\").reverse()[0],
+    const dirs = currentDir.value.d.map((t): DataItem => ({
+        path: t.n.split(systemPat.value).reverse()[0],
     }));
-    const files = currentDir.value.f.map(t => ({
+    const files = currentDir.value.f.map((t): DataItem => ({
         path: t.n,
         size: t.s,
         time: t.t,
+
+        chmod: t.c,
+        user : t.u,
+        group: t.g,
     }));
 
     return [...dirs, ...files];

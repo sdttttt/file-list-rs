@@ -53,6 +53,7 @@ export default defineConfig(async () => ({
                     ],
                 },
             ],
+            dts: "src/auto-imports.d.ts",
         }),
 
         Components({
@@ -63,6 +64,7 @@ export default defineConfig(async () => ({
                 "src/views/*/components"
             ],
             allowOverrides: false,
+            dts           : "src/components.d.ts",
         }),
 
         UnoCSS(),

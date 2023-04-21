@@ -49,25 +49,36 @@
 
   <n-modal
     v-model:show="showFinderFileResult"
-    preset="dialog"
+    preset="card"
     title="符合结果的文件路径"
     style="width: 800px;"
   >
-    <n-table striped>
-      <thead>
-        <tr>
-          <th>路径</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="t in finderFileResult"
-          :key="t"
-        >
-          <td>{{ t }}</td>
-        </tr>
-      </tbody>
-    </n-table>
+    <n-space vertical>
+      <n-input
+        v-model:value="finderFileFilterKeyword"
+        style="width: 300px"
+        show-count
+        placeholder="过滤"
+        clearable
+      />
+      <n-scrollbar style="max-height: 600px">
+        <n-table striped>
+          <thead>
+            <tr>
+              <th>路径</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="t in finderFileList"
+              :key="t"
+            >
+              <td>{{ t }}</td>
+            </tr>
+          </tbody>
+        </n-table>
+      </n-scrollbar>
+    </n-space>
   </n-modal>
 </template>
 
@@ -92,8 +103,9 @@ const {
     handleOpenFinderForm,
     finderForm,
     showFinderFileResult,
+    finderFileList,
     handleFind,
-    finderFileResult,
+    finderFileFilterKeyword,
     finderDirTree,
     showFinderForm,
 } = useFinder();

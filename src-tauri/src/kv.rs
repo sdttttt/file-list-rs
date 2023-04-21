@@ -24,7 +24,7 @@ pub struct FileListDb {
 
 impl FileListDb {
     pub fn new(db: Arc<sled::Db>, command: &str) -> anyhow::Result<FileListDb> {
-        let os = Os::from_command(command)?;
+        let os = Os::from_command_str(command)?;
         Ok(Self {
             os,
             db
@@ -36,6 +36,7 @@ impl FileListDb {
         self.db.to_owned()
     }
 
+    // 目录信息
     pub fn dir_info(&self, path: &str) -> anyhow::Result<IDir> {
         let mut root: Option<IDir> = None;
         let mut dirs: Vec<IDir> = vec![];
@@ -52,17 +53,20 @@ impl FileListDb {
                 }
 
                 // 去掉本次路径的头, 必须是文件分隔符开头, 不然会出现以下情况：
-                // A:\abc\git # 匹配git下的子目录
-                // A:\abc\github # 该目录不是子目录，但是却命中了
-                // A:\abc\git\hub # 这个才是子目录
-                // 但是也有例外: A:\ 盘符，盘符后的路径可以不跟随
-                if !ks[path.len()..].starts_with("\\") && !path.ends_with(":\\") {
+                // .\abc\git # 匹配git下的子目录
+                // .\abc\github # 该目录不是子目录，但是却命中了
+                // .\abc\git\hub # 这个才是子目录
+                // 但是也有例外: Windows系统下的 A:\ 盘符后的路径可以不跟随
+                if !ks[path.len()..].starts_with(self.os.pat()) 
+                && (self.os != Os::Windows 
+                || !path.ends_with(Os::WINDOWS_DISK_SYMBOL)) 
+                {
                     continue;
                 }
 
                 // 去掉本次路径的头, 然后通过文件系统的分隔符, 通过剩下的路径段数查看是否是本次查询目录的子目录
                 let is_sub_dir = ks[path.len()..]
-                    .split("\\")
+                    .split(self.os.pat())
                     .filter(|t| !t.trim().is_empty())
                     .count()
                     == 1;
@@ -90,7 +94,7 @@ impl FileListDb {
             if let Ok((ref k, _)) = kv_result {
                 let ks = utils::ivec_to_str(k);
 
-                let mut path_seq = ks.split("\\").collect::<Vec<&str>>();
+                let mut path_seq = ks.split(self.os.pat()).collect::<Vec<&str>>();
                 path_seq.reverse();
 
                 if reg.is_match(path_seq[0]) {
@@ -119,7 +123,7 @@ impl FileListDb {
                         .filter(|t| reg.is_match(&t.name))
                         .collect::<Vec<&IFile>>();
                     for file in match_files {
-                        result_file_path.push(format!("{}\\{}", ks, file.name))
+                        result_file_path.push(format!("{}{}{}", ks, self.os.pat(),file.name))
                     }
                 }
             }

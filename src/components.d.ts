@@ -9,8 +9,8 @@ export {}
 
 declare module '@vue/runtime-core' {
   export interface GlobalComponents {
-    FileSelectorForm: typeof import('./src/components/FileSelectorForm/index.vue')['default']
-    FileTreeFinderForm: typeof import('./src/components/FileTreeFinderForm/index.vue')['default']
+    FileSelectorForm: typeof import('./components/FileSelectorForm/index.vue')['default']
+    FileTreeFinderForm: typeof import('./components/FileTreeFinderForm/index.vue')['default']
     NButton: typeof import('naive-ui')['NButton']
     NCard: typeof import('naive-ui')['NCard']
     NConfigProvider: typeof import('naive-ui')['NConfigProvider']
@@ -25,16 +25,15 @@ declare module '@vue/runtime-core' {
     NLayoutContent: typeof import('naive-ui')['NLayoutContent']
     NLayoutHeader: typeof import('naive-ui')['NLayoutHeader']
     NLayoutSider: typeof import('naive-ui')['NLayoutSider']
-    NList: typeof import('naive-ui')['NList']
-    NListItem: typeof import('naive-ui')['NListItem']
     NLoadingBarProvider: typeof import('naive-ui')['NLoadingBarProvider']
     NMessageProvider: typeof import('naive-ui')['NMessageProvider']
     NModal: typeof import('naive-ui')['NModal']
     NNotificationProvider: typeof import('naive-ui')['NNotificationProvider']
+    NScrollbar: typeof import('naive-ui')['NScrollbar']
     NSelect: typeof import('naive-ui')['NSelect']
     NSpace: typeof import('naive-ui')['NSpace']
     NTable: typeof import('naive-ui')['NTable']
     NTree: typeof import('naive-ui')['NTree']
-    ParseRecords: typeof import('./src/components/ParseRecords/index.vue')['default']
+    ParseRecords: typeof import('./components/ParseRecords/index.vue')['default']
   }
 }

@@ -4,7 +4,6 @@ use sled::IVec;
 
 use crate::{os::Os};
 
-#[inline]
 pub fn split_path(path: &str, os: &Os) -> Vec<String> {    
     path.split(os.pat())
         .map(|t| t.to_owned())
@@ -12,13 +11,11 @@ pub fn split_path(path: &str, os: &Os) -> Vec<String> {
         .collect()
 }
 
-#[inline]
 pub fn join_path_vec(vec: Vec<String>, os: &Os) -> String {
     vec.join(os.pat())
 }
 
 // 分割文件行
-#[inline]
 pub fn split_file_line(line: &str) -> Vec<&str> {
     line.split(" ")
         .filter(|t| !t.trim().is_empty()) // 排除空
@@ -26,7 +23,6 @@ pub fn split_file_line(line: &str) -> Vec<&str> {
         .collect()
 }
 
-#[inline]
 pub fn hash(k: impl Hash) -> String {
     let mut buffer = itoa::Buffer::new();
     let mut hasher = std::collections::hash_map::DefaultHasher::default();
@@ -34,7 +30,6 @@ pub fn hash(k: impl Hash) -> String {
     buffer.format(hasher.finish()).to_owned()
 }
 
-#[inline]
 pub fn ivec_to_str(vec: &IVec) -> &str {
     std::str::from_utf8(vec).expect("ivec转换出错")
 }
@@ -53,5 +48,11 @@ mod tests {
         assert_eq!("11:20", r[1]);
         assert_eq!("1,033", r[2]);
         assert_eq!("composite-literals-leading-lines.txt", r[3]);
+    }
+
+    #[test]
+    fn test_slice() {
+        let line = "./awdawd/awdawd:";
+        assert_eq!("./awdawd/awdawd", &line[..line.len() -1 ]);
     }
 }

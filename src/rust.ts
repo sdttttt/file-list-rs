@@ -42,6 +42,8 @@ export type File = {
     t: string; // time
 
     c?: string; // chmod only unix
+    u?: string; // user only unix
+    g?: string; // group only unix
 };
 
 export async function greetRust(): Promise<BackendResponse<String>> {

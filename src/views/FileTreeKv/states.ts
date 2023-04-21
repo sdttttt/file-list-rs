@@ -5,9 +5,6 @@ import {
     FileTreeFindForm, TreeOptionExt
 } from "@/types";
 import {
-    Ref, computed, h, ref, unref, watch
-} from "vue";
-import {
     useDirViewStore
 } from "@/store";
 import {
@@ -18,12 +15,11 @@ import {
 } from "naive-ui";
 import {
     useCurrentRecordStore
-} from "@/store/modules/current-record";
+} from "@/store";
 import {
     storeToRefs
 } from "pinia";
 
-const PathSeq = "\\";
 
 export function useTreeView() {
     const currentRecordStore = useCurrentRecordStore();
@@ -76,6 +72,14 @@ export function useFinder() {
     // 文件夹渲染树
     const finderDirTree = ref<TreeOptionExt[]>([]);
 
+    const finderFileFilterKeyword = ref("");
+    const finderFileList = computed(() => {
+        if ("" !== finderFileFilterKeyword.value) {
+            return finderFileResult.value.filter(t => t.includes(finderFileFilterKeyword.value));
+        }
+        return finderFileResult.value;
+    });
+
     function handleOpenFinderForm() {
         showFinderForm.value = true;
     }
@@ -125,11 +129,12 @@ export function useFinder() {
 
     return {
         showFinder,
+        showFinderFileResult,
         handleOpenFinderForm,
         finderForm,
-        showFinderFileResult,
+        finderFileList,
+        finderFileFilterKeyword,
         handleFind,
-        finderFileResult,
         finderDirTree,
         showFinderForm,
     };
@@ -137,17 +142,25 @@ export function useFinder() {
 
 export function handleLoadDirFunc() {
     const currentRecordStore = useCurrentRecordStore();
+    const {
+        record,
+        systemPat
+    } = storeToRefs(currentRecordStore);
 
     return async (op: TreeOptionExt): Promise<void> => {
         if (!op.meta) {
-            op.meta = unwrap(await dbSelect(currentRecordStore.record.name, op.key as string));
+            op.meta = unwrap(await dbSelect(record.value.name, op.key as string));
         }
-        op.children = terserSelectDirToTreeNodes(op.meta as Dir);
+        op.children = terserSelectDirToTreeNodes(op.meta as Dir, systemPat.value);
     };
 }
 
 export function treeNodePropsFunc() {
     const currentRecordStore = useCurrentRecordStore();
+    const {
+        record,
+    } = storeToRefs(currentRecordStore);
+
 
     return ({
         option
@@ -156,7 +169,7 @@ export function treeNodePropsFunc() {
             onClick: async () => {
                 if (!option.meta) {
                     option.meta = unwrap(
-                        await dbSelect(currentRecordStore.record.name, option.key as string)
+                        await dbSelect(record.value.name, option.key as string)
                     );
                 }
                 const dirViewStroe = useDirViewStore();
@@ -198,11 +211,11 @@ export function updatePrefixWithExpaned(
     }
 }
 
-function terserSelectDirToTreeNodes(dir: Dir): TreeOptionExt[] {
+function terserSelectDirToTreeNodes(dir: Dir, pathSeq: string): TreeOptionExt[] {
     const dirNodes = dir.d.map(
         (t): TreeOptionExt => ({
             key   : t.n,
-            label : t.n.split(PathSeq).reverse()[0], // 获取最后一段路径
+            label : t.n.split(pathSeq).reverse()[0], // 获取最后一段路径
             isLeaf: false,
             prefix: () =>
                 h(NIcon, null, {
@@ -213,7 +226,7 @@ function terserSelectDirToTreeNodes(dir: Dir): TreeOptionExt[] {
 
     const fileNodes = dir.f.map(
         (t): TreeOptionExt => ({
-            key   : dir.n + PathSeq + t.n,
+            key   : dir.n + pathSeq + t.n,
             label : t.n,
             isLeaf: true,
             meta  : t,

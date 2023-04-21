@@ -10,6 +10,11 @@ export enum ParseMode {
     LsALHR = "ls -alhR",
 }
 
+export enum SystemPat {
+    Windows = "\\",
+    Unix = "/"
+}
+
 export enum ParseBackend {
     Mem = "0",
     Sled = "1",

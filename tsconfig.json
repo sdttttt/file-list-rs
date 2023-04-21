@@ -17,15 +17,10 @@
             "DOM"
         ],
         "types": [
-            "./auto-imports.d.ts",
-            "./components.d.ts",
             "vite/client",
             "vue/ref-macros",
             "naive-ui/volar",
-            "unplugin-vue-macros/macros-global",
-            "unplugin-icons/types/vue",
-            "unplugin-vue-define-options/macros-global",
-            "@vue-macros/reactivity-transform/macros-global"
+            "unplugin-vue-macros/macros-global"
         ],
         "skipLibCheck": true,
         "paths": {
@@ -53,7 +48,6 @@
             "@vue-macros/volar/define-slots",
             "@vue-macros/volar/export-props"
         ]
-        // ...
     },
     "references": [
         {

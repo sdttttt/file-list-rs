@@ -10,7 +10,7 @@
 ## Futures
 
 - [x] `dir /s *.*`
-- [ ] `ls -alhR`
+- [x] `ls -alhR`
 - [x] 英文
 - [x] 中文
 
@@ -28,6 +28,10 @@ pnpm tauri build
 安装包在`src-tauri/target/release/bundle`目录下。
 
 > tauri 无法交叉编译，每次需要在对应的平台上编译.
+
+## Problom
+
+如果出现页面卡死（点击无效），右键刷新即可。
 
 ## Bechmark
 

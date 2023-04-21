@@ -8,7 +8,7 @@ use crate::{
     dir::IDir,
     file::IFile,
     i18n::{KeywordLibray, match_lang},
-    utils::{self}, Parser, os::Os,
+    utils::{self}, Parser, os::Os, command::ParseCommand,
 };
 
 // 有效的解析文本
@@ -58,31 +58,107 @@ pub struct DirSParser {
     root_path: Option<String>,
     current_path: Option<String>,
     db: Arc<sled::Db>,
-    os: Os
+    command: ParseCommand,
 }
+
+impl Parser for DirSParser {
+
+     fn parse_line(&mut self, line: &str, line_number: &usize ) -> anyhow::Result<()> {
+         // 跳过空行
+         if line.is_empty() {
+            return Ok(());
+        }
+
+        // 没有加载语言
+        if self.keywords.is_none() {
+            if self.try_load_language(line) {
+                return Ok(());
+            } else {
+                if *line_number > 3 {
+                    bail!("前三行行都没有检测到该输出所使用的语言，退出。")
+                }
+            }
+        }
+
+        // 匹配到目录路径了
+        if let Some(mat) = REGEX_DIR_PATH.find(line) {
+            let dir_path = mat.as_str();
+            // 记录当前目录
+            self.current_path = Some(dir_path.to_owned());
+
+            // 如果根路径为空或者，当前匹配的路径长度比根路径小，就换成该路径
+            if self.root_path.is_none()
+                || self.root_path.as_ref().unwrap().len() > dir_path.len()
+            {
+                self.root_path = Some(dir_path.to_owned());
+            }
+            // 模式改为目录模式
+            self.mode = DirSParseMode::MatchDir;
+            // 处理该目录
+            self.find_dir()?;
+           
+            return Ok(());
+        }
+
+        // 匹配到文件夹大小
+        if line.contains(self.keywords.as_ref().unwrap().dir_s_file_count())
+            && self.mode == DirSParseMode::MatchDir
+        {
+            let sizes = REGEX_NUMBER
+                .find_iter(line)
+                .map(|t| t.as_str().trim())
+                .collect::<Vec<&str>>();
+            // 必须是2个，一个是文件数量，一个是文件夹
+            debug_assert_eq!(sizes.len(), 2);
+            self.write_dir_size(sizes[1])?;
+
+            self.mode = DirSParseMode::Empty;
+            return Ok(());
+        }
+
+        if self.mode == DirSParseMode::MatchDir {
+            // 如果上面判断都没中，说明是文件行
+            let files_line_vec = utils::split_file_line(line);
+
+            // 必须是>=4，不然就是无效的文件行
+            debug_assert!(files_line_vec.len() >= 4);
+            if files_line_vec.contains(&"<DIR>") {
+                // 目录的话上面就记录了, 下一个循环
+                return Ok(());
+            }
+            let file_info = IFile::from_line_vec_for_dir_s(files_line_vec);
+            self.insert_file(file_info)?;
+        }
+
+        Ok(())
+    }
+
+    fn root_path(&mut self) -> anyhow::Result<String> {
+        self.db.flush()?;
+        Ok(self.root_path.to_owned().expect("没有根路径？绝对不可能！"))
+    }
+}
+
 
 impl DirSParser {
 
-    pub const COMMAND: &str = "dir /s *.*";
-
     pub fn new(db: Arc<sled::Db>) -> Self {
-        let os = Os::Windows;
+        let command = ParseCommand::DirS;
         Self {
             root_path: None,
             current_path: None,
             keywords: None,
             mode: DirSParseMode::Empty,
             db,
-            os,
+            command,
         }
     }
   
-
     fn find_dir(&mut self) -> Result<(), anyhow::Error> {
         let path = self.current_path.as_ref().unwrap();
         if !self.db.contains_key(path)? {
             // 初始化一个新的Dir，序列化插入
-            let dir = IDir::new(path, self.os);
+            let dir = IDir::new(path, Os::from_command(&self.command));
             self.db.insert(path, serde_json::to_vec(&dir)?)?;
         }
         Ok(())
@@ -113,6 +189,7 @@ impl DirSParser {
                 dir.files.push(file);
                 self.db.insert(path, serde_json::to_vec(&dir)?)?;
             }
+
             None => {
                 bail!("目录键不存在？离谱！{}", path)
             }
@@ -120,94 +197,18 @@ impl DirSParser {
         Ok(())
     }
 
-}
+    fn try_load_language(&mut self, text: &str) -> bool {
+            // 对改行语言匹配，装载对应的关键词库
+            if let Some(k) = match_lang(text, &self.command) {
+                self.keywords = Some(k);
+                return true
+             }
 
-
-impl Parser  for DirSParser {
-     fn parse(&mut self, f: File) -> anyhow::Result<String> {
-        let buf_lines = BufReader::new(f).lines();
-        // 行数计数器
-        let mut line_count = 0;
-        for line_result in buf_lines {
-                let line = &line_result?;
-
-                    // 跳过空行
-                    if line.trim().is_empty() {
-                        continue;
-                    }
-
-                    // 空行不算一行
-                    line_count += 1;
-                    // 没有加载语言
-                    if self.keywords.is_none() {
-                        // 对改行语言匹配，装载对应的关键词库
-                        match match_lang(line) {
-                            Some(k) => self.keywords = Some(k),
-                            None => {
-                                if line_count > 3 {
-                                    bail!("前三行都没有检测到该输出所使用的语言，退出。")
-                                }
-                                continue;
-                            }
-                        }
-                    }
-
-                    // 匹配到目录路径了
-                    if let Some(mat) = REGEX_DIR_PATH.find(line) {
-                        let dir_path = mat.as_str();
-                        // 记录当前目录
-                        self.current_path = Some(dir_path.to_owned());
-
-                        // 如果根路径为空或者，当前匹配的路径长度比根路径小，就换成该路径
-                        if self.root_path.is_none()
-                            || self.root_path.as_ref().unwrap().len() > dir_path.len()
-                        {
-                            self.root_path = Some(dir_path.to_owned());
-                        }
-                        // 模式改为目录模式
-                        self.mode = DirSParseMode::MatchDir;
-                        // 处理该目录
-                        self.find_dir()?;
-                        // 进入下一个循环
-                        continue;
-                    }
-
-                    // 匹配到文件夹大小
-                    if line.contains(self.keywords.as_ref().unwrap().dir_s_file_count())
-                        && self.mode == DirSParseMode::MatchDir
-                    {
-                        let sizes = REGEX_NUMBER
-                            .find_iter(line)
-                            .map(|t| t.as_str().trim())
-                            .collect::<Vec<&str>>();
-                        // 必须是2个，一个是文件数量，一个是文件夹
-                        debug_assert_eq!(sizes.len(), 2);
-                        self.write_dir_size(sizes[1])?;
-
-                        self.mode = DirSParseMode::Empty;
-                        continue;
-                    }
-
-                    if self.mode == DirSParseMode::MatchDir {
-                        // 如果上面判断都没中，说明是文件行
-                        let files_line_vec = utils::split_file_line(line);
-
-                        // 必须是>=4，不然就是无效的文件行
-                        debug_assert!(files_line_vec.len() >= 4);
-                        if files_line_vec.contains(&"<DIR>") {
-                            // 目录的话上面就记录了, 下一个循环
-                            continue;
-                        }
-                        let file_info = IFile::from_line_vec_for_dir_s(files_line_vec);
-                        self.insert_file(file_info)?;
-                    }
-            
-        }
-
-        self.db.flush()?;
-        Ok(self.root_path.to_owned().expect("没有根路径？绝对不可能！"))
+        false
     }
+
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -229,7 +230,7 @@ mod tests {
         let file = File::open(d).unwrap();
         let mut f = DirSParser::new(db.to_owned());
         let _ = f.parse(file).unwrap();
-        let file_list = FileListDb::new(db, DirSParser::COMMAND).unwrap();
+        let file_list = FileListDb::new(db, ParseCommand::DIR_S_COMMAND).unwrap();
         // println!("{:#?}", file_list.dir_info(&root).unwrap());
         println!("{:#?}", file_list.find_dir("git"));
         println!("{:#?}", file_list.find_file("nps"));

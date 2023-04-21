@@ -15,7 +15,7 @@ import {
 } from "@/rust";
 import {
     useCurrentRecordStore
-} from "@/store/modules/current-record";
+} from "@/store";
 
 export function useMainView() {
 
