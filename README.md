@@ -21,7 +21,7 @@
 
 ```
 sudo apt-get install libssl-dev # linux
-pnpm tauri build
+pnpm build
 ```
 
 构建物在`src-tauri/target/release`目录下，
