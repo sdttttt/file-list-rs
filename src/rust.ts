@@ -7,7 +7,7 @@ import {
 } from "./types";
 
 export enum CommandMode {
-    DirS = ""
+    DirS = "",
 }
 
 export type BackendResponse<T> = {
@@ -17,8 +17,8 @@ export type BackendResponse<T> = {
 };
 
 export type HistoryRecordItem = {
-    name: string,
-    command: ParseMode,
+    name: string;
+    command: ParseMode;
     root: string;
     dbKey: string;
 };
@@ -113,7 +113,9 @@ export async function dbFindFile(
     });
 }
 
-export async function parseRecords(): Promise<BackendResponse<HistoryRecordItem[]>> {
+export async function parseRecords(): Promise<
+    BackendResponse<HistoryRecordItem[]>
+    > {
     return await invoke("parse_records");
 }
 

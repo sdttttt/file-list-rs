@@ -10,7 +10,7 @@
           strong
           secondary
           type="warning"
-          style="width: 100%;"
+          style="width: 100%"
           @click="() => (showFinder = false)"
         >
           关闭查询树
@@ -20,7 +20,7 @@
           type="info"
           strong
           secondary
-          style="width: 100%;"
+          style="width: 100%"
           @click="handleOpenFinderForm"
         >
           查找
@@ -51,7 +51,7 @@
     v-model:show="showFinderFileResult"
     preset="card"
     title="符合结果的文件路径"
-    style="width: 800px;"
+    style="width: 800px"
   >
     <n-space vertical>
       <n-input

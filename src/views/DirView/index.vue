@@ -6,12 +6,8 @@
           {{ currentDir?.n || "未选择文件夹" }}
         </template>
         <n-space>
-          <span>
-            大小: {{ currentDir?.s || "无" }}
-          </span>
-          <span>
-            条目: {{ dirData.length || 0 }}
-          </span>
+          <span> 大小: {{ currentDir?.s || "无" }} </span>
+          <span> 条目: {{ dirData.length || 0 }} </span>
         </n-space>
       </n-card>
     </n-layout-header>
@@ -29,8 +25,7 @@
 
 <script lang="ts" setup>
 import {
-    useDirViewStore,
-    useCurrentRecordStore
+    useDirViewStore, useCurrentRecordStore
 } from "@/store";
 import {
     storeToRefs
@@ -66,12 +61,11 @@ watch(tableHeight, v => {
 });
 
 const {
-    currentDir,
+    currentDir
 } = storeToRefs(useDirViewStore());
 
 const {
-    systemPat,
-    record
+    systemPat, record
 } = storeToRefs(useCurrentRecordStore());
 
 const columns = computed(() => {
@@ -92,18 +86,22 @@ const dirData = computed((): DataItem[] => {
     if (!currentDir.value) {
         return [];
     }
-    const dirs = currentDir.value.d.map((t): DataItem => ({
-        path: t.n.split(systemPat.value).reverse()[0],
-    }));
-    const files = currentDir.value.f.map((t): DataItem => ({
-        path: t.n,
-        size: t.s,
-        time: t.t,
+    const dirs = currentDir.value.d.map(
+        (t): DataItem => ({
+            path: t.n.split(systemPat.value).reverse()[0],
+        })
+    );
+    const files = currentDir.value.f.map(
+        (t): DataItem => ({
+            path: t.n,
+            size: t.s,
+            time: t.t,
 
-        chmod: t.c,
-        user : t.u,
-        group: t.g,
-    }));
+            chmod: t.c,
+            user : t.u,
+            group: t.g,
+        })
+    );
 
     return [...dirs, ...files];
 });

@@ -18,7 +18,6 @@ import {
 } from "@/store";
 
 export function useMainView() {
-
     const currentRecordStore = useCurrentRecordStore();
 
     function useFileSelector() {
@@ -39,9 +38,7 @@ export function useMainView() {
 
         async function handleParseFileByPath(): Promise<boolean> {
             const {
-                name = "",
-                command,
-                path = ""
+                name = "", command, path = ""
             } = unref(fileSelectionForm);
 
             if ("" === name.trim()) {
@@ -64,10 +61,7 @@ export function useMainView() {
             switch (backendMode.value) {
             case ParseBackend.Sled: {
                 const resultRecord = unwrap(
-                    await kvParse(
-                        name,
-                        command,
-                        path)
+                    await kvParse(name, command, path)
                 );
 
                 if (resultRecord) {
@@ -138,6 +132,5 @@ export function useMainView() {
     return {
         useFileSelector,
         useHistory,
-
     };
 }

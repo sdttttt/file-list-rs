@@ -5,35 +5,35 @@
 // Read more: https://github.com/vuejs/core/pull/3399
 import '@vue/runtime-core'
 
-export {}
+export {};
 
-declare module '@vue/runtime-core' {
-  export interface GlobalComponents {
-    FileSelectorForm: typeof import('./components/FileSelectorForm/index.vue')['default']
-    FileTreeFinderForm: typeof import('./components/FileTreeFinderForm/index.vue')['default']
-    NButton: typeof import('naive-ui')['NButton']
-    NCard: typeof import('naive-ui')['NCard']
-    NConfigProvider: typeof import('naive-ui')['NConfigProvider']
-    NDataTable: typeof import('naive-ui')['NDataTable']
-    NDialogProvider: typeof import('naive-ui')['NDialogProvider']
-    NForm: typeof import('naive-ui')['NForm']
-    NFormItem: typeof import('naive-ui')['NFormItem']
-    NGi: typeof import('naive-ui')['NGi']
-    NGrid: typeof import('naive-ui')['NGrid']
-    NInput: typeof import('naive-ui')['NInput']
-    NLayout: typeof import('naive-ui')['NLayout']
-    NLayoutContent: typeof import('naive-ui')['NLayoutContent']
-    NLayoutHeader: typeof import('naive-ui')['NLayoutHeader']
-    NLayoutSider: typeof import('naive-ui')['NLayoutSider']
-    NLoadingBarProvider: typeof import('naive-ui')['NLoadingBarProvider']
-    NMessageProvider: typeof import('naive-ui')['NMessageProvider']
-    NModal: typeof import('naive-ui')['NModal']
-    NNotificationProvider: typeof import('naive-ui')['NNotificationProvider']
-    NScrollbar: typeof import('naive-ui')['NScrollbar']
-    NSelect: typeof import('naive-ui')['NSelect']
-    NSpace: typeof import('naive-ui')['NSpace']
-    NTable: typeof import('naive-ui')['NTable']
-    NTree: typeof import('naive-ui')['NTree']
-    ParseRecords: typeof import('./components/ParseRecords/index.vue')['default']
-  }
+declare module "@vue/runtime-core" {
+    export interface GlobalComponents {
+        FileSelectorForm: typeof import("./components/FileSelectorForm/index.vue")["default"];
+        FileTreeFinderForm: typeof import("./components/FileTreeFinderForm/index.vue")["default"];
+        NButton: typeof import("naive-ui")["NButton"];
+        NCard: typeof import("naive-ui")["NCard"];
+        NConfigProvider: typeof import("naive-ui")["NConfigProvider"];
+        NDataTable: typeof import("naive-ui")["NDataTable"];
+        NDialogProvider: typeof import("naive-ui")["NDialogProvider"];
+        NForm: typeof import("naive-ui")["NForm"];
+        NFormItem: typeof import("naive-ui")["NFormItem"];
+        NGi: typeof import("naive-ui")["NGi"];
+        NGrid: typeof import("naive-ui")["NGrid"];
+        NInput: typeof import("naive-ui")["NInput"];
+        NLayout: typeof import("naive-ui")["NLayout"];
+        NLayoutContent: typeof import("naive-ui")["NLayoutContent"];
+        NLayoutHeader: typeof import("naive-ui")["NLayoutHeader"];
+        NLayoutSider: typeof import("naive-ui")["NLayoutSider"];
+        NLoadingBarProvider: typeof import("naive-ui")["NLoadingBarProvider"];
+        NMessageProvider: typeof import("naive-ui")["NMessageProvider"];
+        NModal: typeof import("naive-ui")["NModal"];
+        NNotificationProvider: typeof import("naive-ui")["NNotificationProvider"];
+        NScrollbar: typeof import("naive-ui")["NScrollbar"];
+        NSelect: typeof import("naive-ui")["NSelect"];
+        NSpace: typeof import("naive-ui")["NSpace"];
+        NTable: typeof import("naive-ui")["NTable"];
+        NTree: typeof import("naive-ui")["NTree"];
+        ParseRecords: typeof import("./components/ParseRecords/index.vue")["default"];
+    }
 }

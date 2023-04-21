@@ -114,7 +114,7 @@ const rules = {
     name: {
         required: true,
         message : "必须填写一个别名",
-        trigger : "blur"
+        trigger : "blur",
     },
 };
 

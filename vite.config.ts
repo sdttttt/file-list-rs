@@ -57,12 +57,9 @@ export default defineConfig(async () => ({
         }),
 
         Components({
-            resolvers : [NaiveUiResolver()],
-            extensions: ["vue", "tsx"],
-            dirs      : [
-                "src/components",
-                "src/views/*/components"
-            ],
+            resolvers     : [NaiveUiResolver()],
+            extensions    : ["vue", "tsx"],
+            dirs          : ["src/components", "src/views/*/components"],
             allowOverrides: false,
             dts           : "src/components.d.ts",
         }),

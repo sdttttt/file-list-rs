@@ -43,12 +43,12 @@ const columns: DataTableColumns<DataItem> = [
         filterOptions: [
             {
                 label: "文件夹",
-                value: "dir"
+                value: "dir",
             },
             {
                 label: "文件",
-                value: "file"
-            }
+                value: "file",
+            },
         ],
     },
     {

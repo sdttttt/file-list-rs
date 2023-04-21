@@ -51,38 +51,42 @@ const columns: DataTableColumns<HistoryRecordItem> = [
         title: "Action",
         key  : "actions",
         render(row) {
-            return h("span", {
-                style: "display: flex; justify-content: space-around;"
-            }, [
-                h(
-                    NButton,
-                    {
-                        strong  : true,
-                        tertiary: true,
-                        onClick : () => {
-                            emit("selected", row);
+            return h(
+                "span",
+                {
+                    style: "display: flex; justify-content: space-around;",
+                },
+                [
+                    h(
+                        NButton,
+                        {
+                            strong  : true,
+                            tertiary: true,
+                            onClick : () => {
+                                emit("selected", row);
+                            },
                         },
-                    },
-                    {
-                        default: () => "恢复",
-                    }
-                ),
+                        {
+                            default: () => "恢复",
+                        }
+                    ),
 
-                h(
-                    NButton,
-                    {
-                        strong  : true,
-                        tertiary: true,
-                        type    : "error",
-                        onClick : () => {
-                            emit("remove", row);
+                    h(
+                        NButton,
+                        {
+                            strong  : true,
+                            tertiary: true,
+                            type    : "error",
+                            onClick : () => {
+                                emit("remove", row);
+                            },
                         },
-                    },
-                    {
-                        default: () => "删除",
-                    }
-                ),
-            ]);
+                        {
+                            default: () => "删除",
+                        }
+                    ),
+                ]
+            );
         },
     },
 ];

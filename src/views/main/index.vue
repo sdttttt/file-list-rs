@@ -65,7 +65,7 @@
     preset="card"
     title="解析记录"
     negative-text="关闭"
-    style="width: 800px;"
+    style="width: 800px"
     @negative-click="() => (showHistoryList = false)"
   >
     <ParseRecords
@@ -89,8 +89,7 @@ defineOptions({
 });
 
 const {
-    useFileSelector,
-    useHistory,
+    useFileSelector, useHistory
 } = useMainView();
 
 const {

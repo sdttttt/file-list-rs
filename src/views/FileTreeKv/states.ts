@@ -20,7 +20,6 @@ import {
     storeToRefs
 } from "pinia";
 
-
 export function useTreeView() {
     const currentRecordStore = useCurrentRecordStore();
 
@@ -75,7 +74,9 @@ export function useFinder() {
     const finderFileFilterKeyword = ref("");
     const finderFileList = computed(() => {
         if ("" !== finderFileFilterKeyword.value) {
-            return finderFileResult.value.filter(t => t.includes(finderFileFilterKeyword.value));
+            return finderFileResult.value.filter(t =>
+                t.includes(finderFileFilterKeyword.value)
+            );
         }
         return finderFileResult.value;
     });
@@ -93,13 +94,18 @@ export function useFinder() {
         }
 
         if (!currentRecordStore.record) {
-            window.$message.warning("当前没有记录, 请先解析文件，或者从解析历史中恢复。");
+            window.$message.warning(
+                "当前没有记录, 请先解析文件，或者从解析历史中恢复。"
+            );
             return;
         }
 
         switch (findType) {
         case "dir": {
-            const dirsResult = await dbFindDir(currentRecordStore.record.name, keyword);
+            const dirsResult = await dbFindDir(
+                currentRecordStore.record.name,
+                keyword
+            );
             if (dirsResult.succ) {
                 window.$message.info(
                     `找到 ${dirsResult.raw.length} 个符合结果的目录`
@@ -114,7 +120,10 @@ export function useFinder() {
             break;
         }
         case "file": {
-            const filesResult = await dbFindFile(currentRecordStore.record.name, keyword);
+            const filesResult = await dbFindFile(
+                currentRecordStore.record.name,
+                keyword
+            );
             if (filesResult.succ) {
                 finderFileResult.value = filesResult.raw;
                 window.$message.info(
@@ -143,24 +152,27 @@ export function useFinder() {
 export function handleLoadDirFunc() {
     const currentRecordStore = useCurrentRecordStore();
     const {
-        record,
-        systemPat
+        record, systemPat
     } = storeToRefs(currentRecordStore);
 
     return async (op: TreeOptionExt): Promise<void> => {
         if (!op.meta) {
-            op.meta = unwrap(await dbSelect(record.value.name, op.key as string));
+            op.meta = unwrap(
+                await dbSelect(record.value.name, op.key as string)
+            );
         }
-        op.children = terserSelectDirToTreeNodes(op.meta as Dir, systemPat.value);
+        op.children = terserSelectDirToTreeNodes(
+            op.meta as Dir,
+            systemPat.value
+        );
     };
 }
 
 export function treeNodePropsFunc() {
     const currentRecordStore = useCurrentRecordStore();
     const {
-        record,
+        record
     } = storeToRefs(currentRecordStore);
-
 
     return ({
         option
@@ -174,7 +186,7 @@ export function treeNodePropsFunc() {
                 }
                 const dirViewStroe = useDirViewStore();
                 if (option.isLeaf) {
-                // 叶子节点说明是文件了，不需要展示
+                    // 叶子节点说明是文件了，不需要展示
                     return;
                 }
                 dirViewStroe.updateCurrentDirView(option.meta as Dir);
@@ -211,7 +223,10 @@ export function updatePrefixWithExpaned(
     }
 }
 
-function terserSelectDirToTreeNodes(dir: Dir, pathSeq: string): TreeOptionExt[] {
+function terserSelectDirToTreeNodes(
+    dir: Dir,
+    pathSeq: string
+): TreeOptionExt[] {
     const dirNodes = dir.d.map(
         (t): TreeOptionExt => ({
             key   : t.n,

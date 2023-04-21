@@ -12,7 +12,7 @@ export enum ParseMode {
 
 export enum SystemPat {
     Windows = "\\",
-    Unix = "/"
+    Unix = "/",
 }
 
 export enum ParseBackend {

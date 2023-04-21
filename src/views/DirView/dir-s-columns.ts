@@ -11,7 +11,6 @@ import {
     DataItem
 } from "./types";
 
-
 const columns: DataTableColumns<DataItem> = [
     {
         title : "名称",
@@ -44,12 +43,12 @@ const columns: DataTableColumns<DataItem> = [
         filterOptions: [
             {
                 label: "文件夹",
-                value: "dir"
+                value: "dir",
             },
             {
                 label: "文件",
-                value: "file"
-            }
+                value: "file",
+            },
         ],
         filter: (value, row) => {
             if ("dir" === value) {
@@ -60,7 +59,7 @@ const columns: DataTableColumns<DataItem> = [
             }
 
             return true;
-        }
+        },
     },
     {
         title : "大小",
@@ -68,8 +67,18 @@ const columns: DataTableColumns<DataItem> = [
         sorter: (row1, row2) => {
             row1.size = row1.size || "";
             row2.size = row2.size || "";
-            const size1 = Number(row1.size?.split("").filter(t => /\d/g.test(t)).join(""));
-            const size2 = Number(row2.size?.split("").filter(t => /\d/g.test(t)).join(""));
+            const size1 = Number(
+                row1.size
+                    ?.split("")
+                    .filter(t => /\d/g.test(t))
+                    .join("")
+            );
+            const size2 = Number(
+                row2.size
+                    ?.split("")
+                    .filter(t => /\d/g.test(t))
+                    .join("")
+            );
             if (!size1) {
                 return -1;
             }
@@ -93,7 +102,6 @@ const columns: DataTableColumns<DataItem> = [
             return time1.valueOf() - time2.valueOf();
         },
     },
-
 ];
 
 export default columns;
