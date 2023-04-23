@@ -9,8 +9,6 @@ export {}
 
 declare module '@vue/runtime-core' {
   export interface GlobalComponents {
-    FileSelectorForm: typeof import("./components/FileSelectorForm/index.vue")["default"]
-    FileTreeFinderForm: typeof import("./components/FileTreeFinderForm/index.vue")["default"]
     NButton: typeof import('naive-ui')['NButton']
     NCard: typeof import('naive-ui')['NCard']
     NConfigProvider: typeof import('naive-ui')['NConfigProvider']
@@ -35,6 +33,5 @@ declare module '@vue/runtime-core' {
     NSpace: typeof import('naive-ui')['NSpace']
     NTable: typeof import('naive-ui')['NTable']
     NTree: typeof import('naive-ui')['NTree']
-    ParseRecords: typeof import("./components/ParseRecords/index.vue")["default"]
   }
 }

@@ -77,6 +77,7 @@ impl Parser for DirSParser {
                 if *line_number > 3 {
                     bail!("前三行行都没有检测到该输出所使用的语言，退出。")
                 }
+                return Ok(());
             }
         }
 
@@ -212,7 +213,7 @@ impl DirSParser {
 
 #[cfg(test)]
 mod tests {
-    use crate::{kv::{create_file_db, FileListDb}, os};
+    use crate::{kv::{create_file_db, FileListDb}};
 
     use super::*;
     use lazy_static::lazy_static;
@@ -234,5 +235,19 @@ mod tests {
         // println!("{:#?}", file_list.dir_info(&root).unwrap());
         println!("{:#?}", file_list.find_dir("git"));
         println!("{:#?}", file_list.find_file("nps"));
+    }
+
+    #[test]
+    fn test_file_list_err() {
+        let mut d = TEST_DATA_PATH.clone();
+        d.push("test/ls-alhr-dist.txt");
+        let (_, db) = create_file_db(d.to_str().unwrap()).unwrap();
+        let file = File::open(d).unwrap();
+        let mut f = DirSParser::new(db.to_owned());
+        let _ = f.parse(file).unwrap();
+        let file_list = FileListDb::new(db, ParseCommand::DIR_S_COMMAND).unwrap();
+        // println!("{:#?}", file_list.dir_info(&root).unwrap());
+        //println!("{:#?}", file_list.find_dir("git"));
+        //println!("{:#?}", file_list.find_file("nps"));
     }
 }

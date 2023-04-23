@@ -99,7 +99,7 @@ impl LsAlhrParser {
 }
 
 impl Parser for LsAlhrParser {
-    fn parse_line(&mut self, line: &str, _: &usize) -> anyhow::Result<()> {
+    fn parse_line(&mut self, line: &str, line_number: &usize) -> anyhow::Result<()> {
         // 跳过空行
         if line.is_empty() {
             // 同时匹配模式改为路径
@@ -111,7 +111,11 @@ impl Parser for LsAlhrParser {
         if self.keywords.is_none() {
             // 对改行语言匹配，装载对应的关键词库
             self.try_load_language(line);
-            // 没检测到就不退出了, ls -alhr 对语言的依赖比较小
+            // 没检测到就不退出了, ls -alhr 暂时没有对语言的依赖
+        }
+
+        if *line_number > 3 && self.current_path.is_none() {
+            bail!("3行没有找到起始路径，退出")
         }
 
         match self.mode {

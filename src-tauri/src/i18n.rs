@@ -17,8 +17,8 @@ lazy_static! {
 pub trait KeywordLibray {
     // dir -s 的匹配只会在前5行执行
     fn dir_s_match_lang(line: &str) -> bool where Self: Sized; 
-    fn dir_s_file_count(&self) -> &'static str;
-    fn dir_s_dir(&self) -> &'static str;
+    fn dir_s_file_count(&self) -> &str;
+    fn dir_s_dir(&self) -> &str;
 
     fn ls_alhr_match_lang(line: &str) -> bool where Self: Sized;
 }
@@ -50,8 +50,6 @@ pub fn match_lang(line: &str, command: &ParseCommand) -> Option<Box<dyn KeywordL
             None
         },
     }
-
-    
 }
 
 
@@ -65,12 +63,12 @@ impl KeywordLibray for Zh {
     }
 
     #[inline]
-    fn dir_s_file_count(&self) -> &'static str {
+    fn dir_s_file_count(&self) -> &str {
         "个文件"
     }
 
     #[inline]
-    fn dir_s_dir(&self) -> &'static str {
+    fn dir_s_dir(&self) -> &str {
         "的目录"
     }
 
@@ -88,12 +86,12 @@ impl KeywordLibray for En {
     }
 
     #[inline]
-    fn dir_s_file_count(&self) -> &'static str {
+    fn dir_s_file_count(&self) -> &str {
         "File(s)"
     }
 
     #[inline]
-    fn dir_s_dir(&self) -> &'static str {
+    fn dir_s_dir(&self) -> &str {
         "Directory of"
     }
 

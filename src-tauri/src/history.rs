@@ -134,10 +134,10 @@ impl ParseRecord {
         for (idx, t) in self.h.iter().enumerate() {
             if t.name == name {
                 self.h.remove(idx);
+                self.sync();
                 break;
             }
         }
-        self.sync();
     }
 
     fn sync(&mut self) {

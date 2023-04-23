@@ -29,6 +29,43 @@ pnpm build
 
 > tauri 无法交叉编译，每次需要在对应的平台上编译.
 
+
+## 添加对应命令的语言支持
+
+```rust
+// src-tauri/src/i18n.rs
+pub fn match_lang(line: &str, command: &ParseCommand) -> Option<Box<dyn KeywordLibray>> {
+
+    match command {
+        // 命令模式
+        ParseCommand::DirS => {
+            // Zh 中文
+            // dir_s_match_lang 该命令的语言匹配实现
+            if Zh::dir_s_match_lang(line) {
+                return Some(Box::new(Zh::default()))
+            };
+            
+            if En::dir_s_match_lang(line) {
+              return  Some(Box::new(En::default()))
+            };
+            None
+        },
+
+        ParseCommand::LsAlhr => {
+            if Zh::ls_alhr_match_lang(line) {
+                return Some(Box::new(Zh::default()))
+            }
+
+            if En::ls_alhr_match_lang(line) {
+                return Some(Box::new(En::default()))
+            }
+
+            None
+        },
+    }
+}
+```
+
 ## Problom
 
 如果出现页面卡死（点击无效），右键刷新即可。
