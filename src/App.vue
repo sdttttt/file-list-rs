@@ -1,5 +1,6 @@
 <template>
   <NProdiver>
+    <ThemeSwitch />
     <div
       flex-1
       flex-row
@@ -10,6 +11,7 @@
 </template>
 
 <script setup lang="ts">
+import ThemeSwitch from "@/components/ThemeSwitch/index.vue";
 import Main from "@/views/main/index.vue";
 import NProdiver from "./NProdiver.vue";
 </script>

@@ -57,11 +57,13 @@ export default defineConfig(async () => ({
         }),
 
         Components({
-            resolvers     : [NaiveUiResolver()],
-            extensions    : ["vue", "tsx"],
-            dirs          : ["src/components", "src/views/*/components"],
-            allowOverrides: false,
-            dts           : "src/components.d.ts",
+            resolvers: [NaiveUiResolver()],
+            globs    : [
+                "src/components/*/index.{vue}"
+            ],
+            directoryAsNamespace: true,
+            allowOverrides      : false,
+            dts                 : "src/components.d.ts",
         }),
 
         UnoCSS(),

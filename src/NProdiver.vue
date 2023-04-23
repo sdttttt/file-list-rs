@@ -1,5 +1,5 @@
 <template>
-  <n-config-provider wh-full>
+  <n-config-provider :theme="store.isDark ? darkTheme : lightTheme">
     <n-loading-bar-provider>
       <n-dialog-provider>
         <n-notification-provider>
@@ -22,15 +22,22 @@ import {
     useLoadingBar,
     useMessage,
     useNotification,
+    darkTheme,
+    lightTheme,
 } from "naive-ui";
-
 import {
     setupDialog, setupMessage
 } from "@/utils/common/index";
+import {
+    useAppStore
+} from "@/store";
 
 defineOptions({
     name: "AppProvider",
 });
+
+const store = useAppStore();
+
 
 // 挂载naive组件的方法至window, 以便在全局使用
 function setupNaiveTools() {
