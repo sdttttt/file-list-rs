@@ -1,14 +1,17 @@
-use std::{fs::File, io::BufRead, io::BufReader, sync::{Arc}};
+use std::sync::Arc;
 
 use anyhow::bail;
 use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::{
+    command::ParseCommand,
     dir::IDir,
     file::IFile,
-    i18n::{KeywordLibray, match_lang},
-    utils::{self}, Parser, os::Os, command::ParseCommand,
+    i18n::{match_lang, KeywordLibray},
+    os::Os,
+    utils::{self},
+    Parser,
 };
 
 // 有效的解析文本
@@ -44,17 +47,20 @@ static ref REGEX_NUMBER: Regex = Regex::new(r"[\d,]+").unwrap();
 }
 
 #[derive(Debug, PartialEq)]
-enum DirSParseMode {
-    Empty,
-    MatchDir,
+enum DirSParseToken {
+    //  驱动器 Z 中的卷是X  卷的序列号是 D6CD-62C1
+    Head,
+    // C:\Users\HP\.vscode\extensions\ms-python.vscode-pylance-2022.11.20\dist\typeshed-fallback\stdlib\email 的目录
+    Path,
+    // 2022/11/10  10:59             1,060 __init__.pyi
+    // 17 个文件         38,447 字节
+    ItemOrInfo,
 }
 
-// dir /s *.* KVDB解析器
-// 别问我两个解析器为什么不抽象，因为抽象太难了，除了核心部分的解析逻辑是相同的，数据保存以及读取的逻辑，以及提供给前端使用的接口完全不一样
-//基本可以看作一个独立的实现
+// dir /s *.* 解析器
 pub struct DirSParser {
     keywords: Option<Box<dyn KeywordLibray>>,
-    mode: DirSParseMode,
+    mode: DirSParseToken,
     root_path: Option<String>,
     current_path: Option<String>,
     db: Arc<sled::Db>,
@@ -62,73 +68,74 @@ pub struct DirSParser {
 }
 
 impl Parser for DirSParser {
+    fn parse_line(&mut self, line: &str, line_number: &usize) -> anyhow::Result<()> {
+        // 跳过空行
+        if line.is_empty() {
+            match self.mode {
+                DirSParseToken::Head | DirSParseToken::ItemOrInfo => self.mode = DirSParseToken::Path,
 
-     fn parse_line(&mut self, line: &str, line_number: &usize ) -> anyhow::Result<()> {
-         // 跳过空行
-         if line.is_empty() {
+                DirSParseToken::Path => self.mode = DirSParseToken::ItemOrInfo,
+            }
             return Ok(());
         }
 
-        // 没有加载语言
-        if self.keywords.is_none() {
-            if self.try_load_language(line) {
-                return Ok(());
-            } else {
-                if *line_number > 3 {
-                    bail!("前三行行都没有检测到该输出所使用的语言，退出。")
+        match self.mode {
+            DirSParseToken::Head => {
+                // 语言只在文件头部的时候检查
+                if self.keywords.is_none() {
+                    if self.try_load_language(line) {
+                        return Ok(());
+                    } else {
+                        if *line_number >= 2 {
+                            bail!("前2行都没有检测到该输出所使用的语言，退出。")
+                        }
+                        return Ok(());
+                    }
                 }
-                return Ok(());
             }
-        }
 
-        // 匹配到目录路径了
-        if let Some(mat) = REGEX_DIR_PATH.find(line) {
-            let dir_path = mat.as_str();
-            // 记录当前目录
-            self.current_path = Some(dir_path.to_owned());
+            DirSParseToken::Path => {
+                if let Some(mat) = REGEX_DIR_PATH.find(line) {
+                    let dir_path = mat.as_str();
+                    // 记录当前目录
+                    self.current_path = Some(dir_path.to_owned());
 
-            // 如果根路径为空或者，当前匹配的路径长度比根路径小，就换成该路径
-            if self.root_path.is_none()
-                || self.root_path.as_ref().unwrap().len() > dir_path.len()
-            {
-                self.root_path = Some(dir_path.to_owned());
+                    // 如果根路径为空或者，当前匹配的路径长度比根路径小，就换成该路径
+                    if self.root_path.is_none()
+                        || self.root_path.as_ref().unwrap().len() > dir_path.len()
+                    {
+                        self.root_path = Some(dir_path.to_owned());
+                    }
+                    // 处理该目录
+                    self.find_dir()?;
+                    return Ok(());
+                }
             }
-            // 模式改为目录模式
-            self.mode = DirSParseMode::MatchDir;
-            // 处理该目录
-            self.find_dir()?;
-           
-            return Ok(());
-        }
 
-        // 匹配到文件夹大小
-        if line.contains(self.keywords.as_ref().unwrap().dir_s_file_count())
-            && self.mode == DirSParseMode::MatchDir
-        {
-            let sizes = REGEX_NUMBER
-                .find_iter(line)
-                .map(|t| t.as_str().trim())
-                .collect::<Vec<&str>>();
-            // 必须是2个，一个是文件数量，一个是文件夹
-            debug_assert_eq!(sizes.len(), 2);
-            self.write_dir_size(sizes[1])?;
+            DirSParseToken::ItemOrInfo => {
+                if line.contains(self.keywords.as_ref().unwrap().dir_s_file_count()) {
+                    let sizes = REGEX_NUMBER
+                        .find_iter(line)
+                        .map(|t| t.as_str().trim())
+                        .collect::<Vec<&str>>();
+                    // 必须是2个，一个是文件数量，一个是文件夹
+                    debug_assert_eq!(sizes.len(), 2);
+                    self.write_dir_size(sizes[1])?;
+                    return Ok(());
+                }
 
-            self.mode = DirSParseMode::Empty;
-            return Ok(());
-        }
+                // 如果上面判断都没中，说明是文件行
+                let files_line_vec = utils::split_file_line(line);
 
-        if self.mode == DirSParseMode::MatchDir {
-            // 如果上面判断都没中，说明是文件行
-            let files_line_vec = utils::split_file_line(line);
-
-            // 必须是>=4，不然就是无效的文件行
-            debug_assert!(files_line_vec.len() >= 4);
-            if files_line_vec.contains(&"<DIR>") {
-                // 目录的话上面就记录了, 下一个循环
-                return Ok(());
+                // 必须是>=4，不然就是无效的文件行
+                debug_assert!(files_line_vec.len() >= 4);
+                if files_line_vec.contains(&"<DIR>") {
+                    // 目录的话上面就记录了, 下一个循环
+                    return Ok(());
+                }
+                let file_info = IFile::from_line_vec_for_dir_s(files_line_vec);
+                self.insert_file(file_info)?;
             }
-            let file_info = IFile::from_line_vec_for_dir_s(files_line_vec);
-            self.insert_file(file_info)?;
         }
 
         Ok(())
@@ -140,21 +147,19 @@ impl Parser for DirSParser {
     }
 }
 
-
 impl DirSParser {
-
     pub fn new(db: Arc<sled::Db>) -> Self {
         let command = ParseCommand::DirS;
         Self {
             root_path: None,
             current_path: None,
             keywords: None,
-            mode: DirSParseMode::Empty,
+            mode: DirSParseToken::Head,
             db,
             command,
         }
     }
-  
+
     fn find_dir(&mut self) -> Result<(), anyhow::Error> {
         let path = self.current_path.as_ref().unwrap();
         if !self.db.contains_key(path)? {
@@ -199,21 +204,19 @@ impl DirSParser {
     }
 
     fn try_load_language(&mut self, text: &str) -> bool {
-            // 对改行语言匹配，装载对应的关键词库
-            if let Some(k) = match_lang(text, &self.command) {
-                self.keywords = Some(k);
-                return true
-             }
+        // 对改行语言匹配，装载对应的关键词库
+        if let Some(k) = match_lang(text, &self.command) {
+            self.keywords = Some(k);
+            return true;
+        }
 
         false
     }
-
 }
-
 
 #[cfg(test)]
 mod tests {
-    use crate::{kv::{create_file_db, FileListDb}};
+    use crate::kv::{create_file_db, FileListDb};
 
     use super::*;
     use lazy_static::lazy_static;
@@ -228,26 +231,12 @@ mod tests {
         let mut d = TEST_DATA_PATH.clone();
         d.push("test/dir-s-list.txt");
         let (_, db) = create_file_db(d.to_str().unwrap()).unwrap();
-        let file = File::open(d).unwrap();
+        let file = std::fs::File::open(d).unwrap();
         let mut f = DirSParser::new(db.to_owned());
         let _ = f.parse(file).unwrap();
         let file_list = FileListDb::new(db, ParseCommand::DIR_S_COMMAND).unwrap();
         // println!("{:#?}", file_list.dir_info(&root).unwrap());
         println!("{:#?}", file_list.find_dir("git"));
         println!("{:#?}", file_list.find_file("nps"));
-    }
-
-    #[test]
-    fn test_file_list_err() {
-        let mut d = TEST_DATA_PATH.clone();
-        d.push("test/ls-alhr-dist.txt");
-        let (_, db) = create_file_db(d.to_str().unwrap()).unwrap();
-        let file = File::open(d).unwrap();
-        let mut f = DirSParser::new(db.to_owned());
-        let _ = f.parse(file).unwrap();
-        let file_list = FileListDb::new(db, ParseCommand::DIR_S_COMMAND).unwrap();
-        // println!("{:#?}", file_list.dir_info(&root).unwrap());
-        //println!("{:#?}", file_list.find_dir("git"));
-        //println!("{:#?}", file_list.find_file("nps"));
     }
 }

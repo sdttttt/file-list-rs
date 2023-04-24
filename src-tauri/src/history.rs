@@ -1,19 +1,17 @@
-use std::{sync::{Mutex, Arc}, fs::{OpenOptions, File}, io::{Read, Write}, path::PathBuf};
+use std::{sync::{Mutex, Arc}, fs::{OpenOptions}, io::{Read, Write}};
 
-use anyhow::{bail};
 use lazy_static::lazy_static;
 
 const HISTORY_FILE_NAME: &str = "history.json"; 
 use log::*;
 
 lazy_static! {
-    static ref HISTORY: Arc<Mutex<ParseRecord>> = {
-        Arc::new(
+    static ref HISTORY: Arc<Mutex<ParseRecord>> = Arc::new(
         Mutex::new(
             ParseRecord::from_local()
         )
-    )
-    };
+    );
+    
 }
 
 fn history_store() -> Arc<Mutex<ParseRecord>>  {

@@ -15,7 +15,7 @@ use crate::{i18n::{KeywordLibray, match_lang}, os::Os, Parser, command::ParseCom
 //drwxrwxr-x  2 sdtttttt sdtttttt 4.0K 12月 20 15:11 loading
 
 #[derive(Debug, PartialEq)]
-enum LsAlhrParseMode {
+enum LsAlhrParseToken {
     Path, // .:
     Total, // 总用量 24K
     Item, // drwxrwxr-x  4 sdtttttt sdtttttt 4.0K  4月 19 15:56 .
@@ -23,7 +23,7 @@ enum LsAlhrParseMode {
 
 pub struct LsAlhrParser {
     keywords: Option<Box<dyn KeywordLibray>>,
-    mode: LsAlhrParseMode,
+    mode: LsAlhrParseToken,
     root_path: String,
     current_path: Option<String>,
     db: Arc<sled::Db>,
@@ -38,7 +38,7 @@ impl LsAlhrParser {
             root_path: ".".into(),
             current_path: None,
             keywords: None,
-            mode: LsAlhrParseMode::Path,
+            mode: LsAlhrParseToken::Path,
             db,
             command,
         }
@@ -103,12 +103,12 @@ impl Parser for LsAlhrParser {
         // 跳过空行
         if line.is_empty() {
             // 同时匹配模式改为路径
-            self.mode = LsAlhrParseMode::Path;
+            self.mode = LsAlhrParseToken::Path;
             return Ok(());
         }
 
-        // 没有加载语言
-        if self.keywords.is_none() {
+        // 只检查前3行
+        if self.keywords.is_none() && *line_number < 3 {
             // 对改行语言匹配，装载对应的关键词库
             self.try_load_language(line);
             // 没检测到就不退出了, ls -alhr 暂时没有对语言的依赖
@@ -119,24 +119,24 @@ impl Parser for LsAlhrParser {
         }
 
         match self.mode {
-            LsAlhrParseMode::Path => {
+            LsAlhrParseToken::Path => {
                 if line.ends_with(":") {
                     // 去掉结尾的冒号
                     self.current_path = Some(line[..line.len() -1].into());
                     self.find_dir()?;
-                    self.mode = LsAlhrParseMode::Total;
+                    self.mode = LsAlhrParseToken::Total;
                 }
             },
 
-            LsAlhrParseMode::Total => {
+            LsAlhrParseToken::Total => {
                 let total_line_vec = line.split(" ").filter(|t| !t.trim().is_empty()).collect::<Vec<&str>>();
                 // 长度必须是2
                 debug_assert_eq!(total_line_vec.len(), 2);
                 self.write_dir_size(total_line_vec[1])?;
-                self.mode = LsAlhrParseMode::Item;
+                self.mode = LsAlhrParseToken::Item;
             },
 
-            LsAlhrParseMode::Item => {
+            LsAlhrParseToken::Item => {
                 // 说明是文件夹，跳过
                 if line.starts_with("d") {
                     return Ok(());
