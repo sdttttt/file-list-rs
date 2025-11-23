@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use anyhow::bail;
+use log::{warn, info};
 
 use crate::{i18n::{KeywordLibray, match_lang}, os::Os, Parser, command::ParseCommand, dir::IDir, utils, file::IFile};
 
@@ -26,6 +27,7 @@ pub struct LsAlhrParser {
     mode: LsAlhrParseToken,
     root_path: String,
     current_path: Option<String>,
+    current_dir: Option<IDir>,
     db: Arc<sled::Db>,
     command: ParseCommand
 }
@@ -37,6 +39,7 @@ impl LsAlhrParser {
         Self {
             root_path: ".".into(),
             current_path: None,
+            current_dir: None,
             keywords: None,
             mode: LsAlhrParseToken::Path,
             db,
@@ -44,48 +47,89 @@ impl LsAlhrParser {
         }
     }
 
-    fn find_dir(&mut self) -> Result<(), anyhow::Error> {
+    fn init_dir(&mut self) -> Result<(), anyhow::Error> {
         let path = self.current_path.as_ref().unwrap();
-        if !self.db.contains_key(path)? {
-            // 初始化一个新的Dir，序列化插入
-            let dir = IDir::new(path, Os::from_command(&self.command));
-            self.db.insert(path, serde_json::to_vec(&dir)?)?;
-        }
+        // 初始化一个新的Dir
+        let dir = IDir::new(path, Os::from_command(&self.command));
+        self.current_dir = Some(dir);
         Ok(())
     }
 
-    fn write_dir_size(&mut self, size: &str) -> Result<(), anyhow::Error> {
-        let path = self.current_path.as_ref().unwrap();
-        match self.db.get(path)? {
-            Some(ref iv) => {
-                let s = utils::ivec_to_str(iv);
-                let mut dir = serde_json::from_str::<IDir>(s)?;
+    fn init_dir_size(&mut self, size: &str) -> Result<(), anyhow::Error> {
+        match self.current_dir {
+            Some(ref mut dir) => {
                 dir.size = Some(size.to_owned());
-                self.db.insert(path, serde_json::to_vec(&dir)?)?;
             }
             None => {
-                bail!("目录键不存在？离谱！{}", path)
+                warn!("init_dir_size: 目录不存在？离谱！");
+                bail!("init_dir_size: 目录不存在？离谱！")
             }
         }
         Ok(())
     }
 
-    fn insert_file(&mut self, file: IFile) -> Result<(), anyhow::Error> {
-        let path = self.current_path.as_ref().unwrap();
-        match self.db.get(path)? {
-            Some(ref iv) => {
-                let s = utils::ivec_to_str(iv);
-                let mut dir = serde_json::from_str::<IDir>(s)?;
+    fn add_file(&mut self, file: IFile) -> Result<(), anyhow::Error> {
+        match self.current_dir {
+            Some(ref mut dir) => {
                 dir.files.push(file);
-                self.db.insert(path, serde_json::to_vec(&dir)?)?;
             }
 
-            None => {
-                bail!("目录键不存在？离谱！{}", path)
+            None => { 
+                warn!("add_file: {:?} 目录不存在？离谱！", file);
+                bail!("add_file: {:?} 目录不存在？离谱！", file)
             }
         }
         Ok(())
     }
+
+    fn save_dir(&mut self) -> Result<(), anyhow::Error> {
+        let path = self.current_path.as_ref().unwrap();
+        let dir = self.current_dir.as_ref().unwrap();
+        self.db.insert(path, serde_json::to_vec(dir)?)?;
+        self.current_dir = None; 
+        Ok(())
+    }
+
+    //fn find_dir(&mut self) -> Result<(), anyhow::Error> {
+    //    let path = self.current_path.as_ref().unwrap();
+    //        // 初始化一个新的Dir，序列化插入
+    //        let dir = IDir::new(path, Os::from_command(&self.command));
+    //        self.db.insert(path, serde_json::to_vec(&dir)?)?;
+    //    Ok(())
+    //}
+
+    //fn write_dir_size(&mut self, size: &str) -> Result<(), anyhow::Error> {
+    //    let path = self.current_path.as_ref().unwrap();
+    //    match self.db.get(path)? {
+    //        Some(ref iv) => {
+    //            let s = utils::ivec_to_str(iv);
+    //            let mut dir = serde_json::from_str::<IDir>(s)?;
+    //            dir.size = Some(size.to_owned());
+    //            self.db.insert(path, serde_json::to_vec(&dir)?)?;
+    //        }
+    //        None => {
+    //            bail!("目录键不存在？离谱！{}", path)
+    //        }
+    //    }
+    //    Ok(())
+    //}
+
+    //fn insert_file(&mut self, file: IFile) -> Result<(), anyhow::Error> {
+    //    let path = self.current_path.as_ref().unwrap();
+    //    match self.db.get(path)? {
+    //        Some(ref iv) => {
+    //            let s = utils::ivec_to_str(iv);
+    //            let mut dir = serde_json::from_str::<IDir>(s)?;
+    //            dir.files.push(file);
+    //            self.db.insert(path, serde_json::to_vec(&dir)?)?;
+    //        }
+
+    //        None => {
+    //            bail!("目录键不存在？离谱！{}", path)
+    //        }
+    //    }
+    //    Ok(())
+    //}
 
     fn try_load_language(&mut self, text: &str) -> bool{
         // 对改行语言匹配，装载对应的关键词库
@@ -93,7 +137,6 @@ impl LsAlhrParser {
             self.keywords = Some(k);
             return true
          }
-
     false
 }
 }
@@ -102,6 +145,9 @@ impl Parser for LsAlhrParser {
     fn parse_line(&mut self, line: &str, line_number: &usize) -> anyhow::Result<()> {
         // 跳过空行
         if line.is_empty() {
+            if self.mode == LsAlhrParseToken::Item {
+                self.save_dir()?;
+            }
             // 同时匹配模式改为路径
             self.mode = LsAlhrParseToken::Path;
             return Ok(());
@@ -122,8 +168,10 @@ impl Parser for LsAlhrParser {
             LsAlhrParseToken::Path => {
                 if line.ends_with(":") {
                     // 去掉结尾的冒号
-                    self.current_path = Some(line[..line.len() -1].into());
-                    self.find_dir()?;
+                    let path = line[..line.len() -1].into();
+                    info!("[{}] {}", line_number, path);
+                    self.current_path = Some(path);
+                    self.init_dir()?;
                     self.mode = LsAlhrParseToken::Total;
                 }
             },
@@ -132,7 +180,7 @@ impl Parser for LsAlhrParser {
                 let total_line_vec = line.split(" ").filter(|t| !t.trim().is_empty()).collect::<Vec<&str>>();
                 // 长度必须是2
                 debug_assert_eq!(total_line_vec.len(), 2);
-                self.write_dir_size(total_line_vec[1])?;
+                self.init_dir_size(total_line_vec[1])?;
                 self.mode = LsAlhrParseToken::Item;
             },
 
@@ -144,7 +192,7 @@ impl Parser for LsAlhrParser {
                 let item_line_vec = line.split(" ").filter(|t| !t.trim().is_empty()).collect::<Vec<&str>>();
                 // 文件名可能有空格，或者是链接的形式
                 debug_assert!(item_line_vec.len() >= 9);
-                self.insert_file(IFile::from_line_vec_for_ls_alhr(item_line_vec))?;
+                self.add_file(IFile::from_line_vec_for_ls_alhr(item_line_vec))?;
             },
         }
 

@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::bail;
 use lazy_static::lazy_static;
+use log::{info, warn};
 use regex::Regex;
 
 use crate::{
@@ -41,7 +42,7 @@ use crate::{
 
 lazy_static! {
 // 目录匹配
-static ref REGEX_DIR_PATH: Regex = Regex::new(r"(\w:\\){1}(\S){0,}").unwrap();
+static ref REGEX_DIR_PATH: Regex = Regex::new(r"((\w:\\){1}(\S){0,}|\\(\S){0,})").unwrap();
 // 匹配底部的数字部分
 static ref REGEX_NUMBER: Regex = Regex::new(r"[\d,]+").unwrap();
 }
@@ -63,6 +64,9 @@ pub struct DirSParser {
     mode: DirSParseToken,
     root_path: Option<String>,
     current_path: Option<String>,
+
+    current_dir: Option<IDir>,
+
     db: Arc<sled::Db>,
     command: ParseCommand,
 }
@@ -72,7 +76,12 @@ impl Parser for DirSParser {
         // 跳过空行
         if line.is_empty() {
             match self.mode {
-                DirSParseToken::Head | DirSParseToken::ItemOrInfo => self.mode = DirSParseToken::Path,
+                DirSParseToken::Head => {
+                    if self.keywords.is_some() {
+                        self.mode = DirSParseToken::Path
+                    }
+                },
+                DirSParseToken::ItemOrInfo => self.mode = DirSParseToken::Path,
 
                 DirSParseToken::Path => self.mode = DirSParseToken::ItemOrInfo,
             }
@@ -95,11 +104,12 @@ impl Parser for DirSParser {
             }
 
             DirSParseToken::Path => {
-                if let Some(mat) = REGEX_DIR_PATH.find(line) {
-                    let dir_path = mat.as_str();
+                if  line.contains(self.keywords.as_ref().unwrap().dir_s_dir()) {
+                    let line_vec = utils::split_space_line(line);
+                    let dir_path = line_vec[..line_vec.len() - 1].join(" ");
                     // 记录当前目录
                     self.current_path = Some(dir_path.to_owned());
-
+                    info!("[{}] {}", line_number, dir_path);
                     // 如果根路径为空或者，当前匹配的路径长度比根路径小，就换成该路径
                     if self.root_path.is_none()
                         || self.root_path.as_ref().unwrap().len() > dir_path.len()
@@ -107,7 +117,7 @@ impl Parser for DirSParser {
                         self.root_path = Some(dir_path.to_owned());
                     }
                     // 处理该目录
-                    self.find_dir()?;
+                    self.init_dir()?;
                     return Ok(());
                 }
             }
@@ -120,12 +130,14 @@ impl Parser for DirSParser {
                         .collect::<Vec<&str>>();
                     // 必须是2个，一个是文件数量，一个是文件夹
                     debug_assert_eq!(sizes.len(), 2);
-                    self.write_dir_size(sizes[1])?;
+                    self.init_dir_size(sizes[1])?;
+                    // 最后保存文件
+                    self.save_dir()?;
                     return Ok(());
                 }
 
                 // 如果上面判断都没中，说明是文件行
-                let files_line_vec = utils::split_file_line(line);
+                let files_line_vec = utils::split_space_line(line);
 
                 // 必须是>=4，不然就是无效的文件行
                 debug_assert!(files_line_vec.len() >= 4);
@@ -134,7 +146,7 @@ impl Parser for DirSParser {
                     return Ok(());
                 }
                 let file_info = IFile::from_line_vec_for_dir_s(files_line_vec);
-                self.insert_file(file_info)?;
+                self.add_file(file_info)?;
             }
         }
 
@@ -153,6 +165,7 @@ impl DirSParser {
         Self {
             root_path: None,
             current_path: None,
+            current_dir: None,
             keywords: None,
             mode: DirSParseToken::Head,
             db,
@@ -160,48 +173,91 @@ impl DirSParser {
         }
     }
 
-    fn find_dir(&mut self) -> Result<(), anyhow::Error> {
+    fn init_dir(&mut self) -> Result<(), anyhow::Error> {
         let path = self.current_path.as_ref().unwrap();
-        if !self.db.contains_key(path)? {
-            // 初始化一个新的Dir，序列化插入
-            let dir = IDir::new(path, Os::from_command(&self.command));
-            self.db.insert(path, serde_json::to_vec(&dir)?)?;
-        }
+        // 初始化一个新的Dir
+        let dir = IDir::new(path, Os::from_command(&self.command));
+        self.current_dir = Some(dir);
         Ok(())
     }
 
-    fn write_dir_size(&mut self, size: &str) -> Result<(), anyhow::Error> {
-        let path = self.current_path.as_ref().unwrap();
-        match self.db.get(path)? {
-            Some(ref iv) => {
-                let s = utils::ivec_to_str(iv);
-                let mut dir = serde_json::from_str::<IDir>(s)?;
+    fn init_dir_size(&mut self, size: &str) -> Result<(), anyhow::Error> {
+        match self.current_dir {
+            Some(ref mut dir) => {
                 dir.size = Some(size.to_owned());
-                self.db.insert(path, serde_json::to_vec(&dir)?)?;
             }
             None => {
-                bail!("目录键不存在？离谱！{}", path)
+                warn!("init_dir_size: 目录不存在？离谱！");
+                bail!("init_dir_size: 目录不存在？离谱！")
             }
         }
         Ok(())
     }
 
-    fn insert_file(&mut self, file: IFile) -> Result<(), anyhow::Error> {
-        let path = self.current_path.as_ref().unwrap();
-        match self.db.get(path)? {
-            Some(ref iv) => {
-                let s = utils::ivec_to_str(iv);
-                let mut dir = serde_json::from_str::<IDir>(s)?;
+    fn add_file(&mut self, file: IFile) -> Result<(), anyhow::Error> {
+        match self.current_dir {
+            Some(ref mut dir) => {
                 dir.files.push(file);
-                self.db.insert(path, serde_json::to_vec(&dir)?)?;
             }
 
-            None => {
-                bail!("目录键不存在？离谱！{}", path)
+            None => { 
+                warn!("add_file: {:?} 目录不存在？离谱！", file);
+                bail!("add_file: {:?} 目录不存在？离谱！", file)
             }
         }
         Ok(())
     }
+
+    fn save_dir(&mut self) -> Result<(), anyhow::Error> {
+        let path = self.current_path.as_ref().unwrap();
+        let dir = self.current_dir.as_ref().unwrap();
+        self.db.insert(path, serde_json::to_vec(dir)?)?;
+        self.current_dir = None; 
+        Ok(())
+    }
+
+    //fn find_dir(&mut self) -> Result<(), anyhow::Error> {
+    //    let path = self.current_path.as_ref().unwrap();
+    //    if !self.db.contains_key(path)? {
+    //        // 初始化一个新的Dir，序列化插入
+    //        let dir = IDir::new(path, Os::from_command(&self.command));
+    //        self.db.insert(path, serde_json::to_vec(&dir)?)?;
+    //    }
+    //    Ok(())
+    //}
+
+    //fn write_dir_size(&mut self, size: &str) -> Result<(), anyhow::Error> {
+    //    let path = self.current_path.as_ref().unwrap();
+    //    match self.db.get(path)? {
+    //        Some(ref iv) => {
+    //            let s = utils::ivec_to_str(iv);
+    //            let mut dir = serde_json::from_str::<IDir>(s)?;
+    //            dir.size = Some(size.to_owned());
+    //            self.db.insert(path, serde_json::to_vec(&dir)?)?;
+    //        }
+    //        None => {
+    //            bail!("目录键不存在？离谱！{}", path)
+    //        }
+    //    }
+    //    Ok(())
+    //}
+
+    //fn insert_file(&mut self, file: IFile) -> Result<(), anyhow::Error> {
+    //    let path = self.current_path.as_ref().unwrap();
+    //    match self.db.get(path)? {
+    //        Some(ref iv) => {
+    //            let s = utils::ivec_to_str(iv);
+    //            let mut dir = serde_json::from_str::<IDir>(s)?;
+    //            dir.files.push(file);
+    //            self.db.insert(path, serde_json::to_vec(&dir)?)?;
+    //        }
+
+    //        None => {
+    //            bail!("目录键不存在？离谱！{}", path)
+    //        }
+    //    }
+    //    Ok(())
+    //}
 
     fn try_load_language(&mut self, text: &str) -> bool {
         // 对改行语言匹配，装载对应的关键词库
@@ -209,7 +265,6 @@ impl DirSParser {
             self.keywords = Some(k);
             return true;
         }
-
         false
     }
 }
@@ -238,5 +293,31 @@ mod tests {
         // println!("{:#?}", file_list.dir_info(&root).unwrap());
         println!("{:#?}", file_list.find_dir("git"));
         println!("{:#?}", file_list.find_file("nps"));
+    }
+
+    #[test]
+    fn test_ja_file_list() {
+        let mut d = TEST_DATA_PATH.clone();
+        d.push("test/ja-dir-s-list.txt");
+        let (_, db) = create_file_db(d.to_str().unwrap()).unwrap();
+        let file = std::fs::File::open(d).unwrap();
+        let mut f = DirSParser::new(db.to_owned());
+        let _ = f.parse(file).unwrap();
+        let file_list = FileListDb::new(db, ParseCommand::DIR_S_COMMAND).unwrap();
+        // println!("{:#?}", file_list.dir_info(&root).unwrap());
+        println!("{:#?}", file_list.find_file("jpg"));
+    }
+
+    #[test]
+    fn test_ja_bug_1_file_list() {
+        let mut d = TEST_DATA_PATH.clone();
+        d.push("test/ja-bug-1.txt");
+        let (_, db) = create_file_db(d.to_str().unwrap()).unwrap();
+        let file = std::fs::File::open(d).unwrap();
+        let mut f = DirSParser::new(db.to_owned());
+        let _ = f.parse(file).unwrap();
+        let file_list = FileListDb::new(db, ParseCommand::DIR_S_COMMAND).unwrap();
+        // println!("{:#?}", file_list.dir_info(&root).unwrap());
+        println!("{:#?}", file_list.find_file("jpg"));
     }
 }

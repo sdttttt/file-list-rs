@@ -148,7 +148,10 @@ pub fn create_file_db(file_path: &str) -> Result<(String, Arc<sled::Db>), anyhow
         sled::Config::default()
             .path(db_path)
             .mode(sled::Mode::HighThroughput) // 高新能模式，会占用更多的磁盘空间
-            .flush_every_ms(Some(1000)) // 多少时间和硬盘同步一次
+            //.use_compression(true)
+            //.compression_factor(10)
+            .cache_capacity(100_000_000_000)
+            .flush_every_ms(Some(3000)) // 多少时间和硬盘同步一次
             .open()?,
     );
 

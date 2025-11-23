@@ -16,7 +16,7 @@ pub fn join_path_vec(vec: Vec<String>, os: &Os) -> String {
 }
 
 // 分割文件行
-pub fn split_file_line(line: &str) -> Vec<&str> {
+pub fn split_space_line(line: &str) -> Vec<&str> {
     line.split(" ")
         .filter(|t| !t.trim().is_empty()) // 排除空
         .map(|t| t.trim())
@@ -42,7 +42,7 @@ mod tests {
     #[test]
     fn test_split_filename_line() {
         let line = "2022/10/14  11:20             1,033 composite-literals-leading-lines.txt";
-        let r = split_file_line(line);
+        let r = split_space_line(line);
 
         assert_eq!("2022/10/14", r[0]);
         assert_eq!("11:20", r[1]);

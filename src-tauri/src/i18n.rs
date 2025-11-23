@@ -12,6 +12,8 @@ lazy_static! {
     // 英文匹配
     static ref REGEX_EN_DIR_S: Regex = Regex::new(r"Volume in drive").unwrap();
     static ref REGEX_EN_LS_ALHR: Regex = Regex::new(r"total").unwrap();
+    // 日文匹配
+    static ref REGEX_JA_DIR_S: Regex = Regex::new(r"のボリューム").unwrap();
 }
 
 pub trait KeywordLibray {
@@ -35,6 +37,11 @@ pub fn match_lang(line: &str, command: &ParseCommand) -> Option<Box<dyn KeywordL
             if En::dir_s_match_lang(line) {
               return  Some(Box::new(En::default()))
             };
+        
+            if Ja::dir_s_match_lang(line) {
+                return Some(Box::new(Ja::default()))
+            }
+
             None
         },
 
@@ -100,6 +107,30 @@ impl KeywordLibray for En {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct Ja;
+
+
+impl KeywordLibray for Ja {
+    fn dir_s_match_lang(line: &str) -> bool where Self: Sized {
+        REGEX_JA_DIR_S.is_match(line)
+    }
+
+    #[inline]
+    fn dir_s_file_count(&self) -> &str {
+        "個のファイル"
+    }
+
+    #[inline]
+    fn dir_s_dir(&self) -> &str {
+        "のディレクトリ"
+    }
+
+    // TODO: 日文暂时不支持ls -alhr
+    fn ls_alhr_match_lang(line: &str) -> bool where Self: Sized {
+        REGEX_EN_LS_ALHR.is_match(line)
+    }
+}
 
 impl Display for Zh {  
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {  
@@ -112,4 +143,9 @@ impl Display for En {
         write!(f, "英文")
     }
 }  
-  
+
+impl Display for Ja {  
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {  
+        write!(f, "日文")
+    }
+}  
