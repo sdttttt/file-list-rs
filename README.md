@@ -2,8 +2,6 @@
 
 将命令输出的内容可视化的文件浏览器. 基于Tauri开发，前端使用Webview, 后端使用Rust.
 
-![展示](./shop.png)
-
 采用Sled解析 (在sled中执行解析，图形压力较小，根据文件大小会消耗对应的硬盘空间，大概是文件的10倍左右，注意硬盘空间)
 解析速度由你的IO速度决定.
 
@@ -73,3 +71,4 @@ pub fn match_lang(line: &str, command: &ParseCommand) -> Option<Box<dyn KeywordL
 ## Bechmark
 
 - 70MB 解析需要 40秒 (disk: 200MB/s)
+
